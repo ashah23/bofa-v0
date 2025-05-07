@@ -1,34 +1,52 @@
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { events } from "@/lib/data"
 import Link from "next/link"
 
-export default function EventsPage() {
+async function getEvents() {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events`, { cache: 'no-store' });
+  if (!res.ok) throw new Error('Failed to fetch events');
+  const data = await res.json();
+
+  // Sort events by date in descending order (newest first)
+  return data.events.sort((a: any, b: any) => {
+    // Handle cases where event_date might be null
+    if (!a.event_date) return -1;
+    if (!b.event_date) return 1;
+    return new Date(a.event_date).getTime() - new Date(b.event_date).getTime();
+  });
+}
+
+export default async function EventsPage() {
+  const events = await getEvents();
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Events</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {events.map((event) => (
-          <Link href={`/events/${event.id}`} key={event.id}>
-            <Card
-              key={event.id}
-              className={`${event.completed ? "bg-muted/50" : ""} h-full hover:shadow-md transition-shadow`}
-            >
+        {events.map((event: any) => (
+          <Link href={`/events/${event.event_id}`} key={event.event_id}>
+            <Card className="h-full hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
-                  <CardTitle>{event.name}</CardTitle>
-                  <Badge variant={event.type === "head-to-head" ? "default" : "secondary"}>
-                    {event.type === "head-to-head" ? "Head to Head" : "Heat"}
-                  </Badge>
+                  <CardTitle>{event.event_name}</CardTitle>
                 </div>
-                <CardDescription>{event.description}</CardDescription>
+                <CardDescription>{event.event_type}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex justify-between items-center">
-                  <span className="font-medium">Points: {event.pointsAwarded}</span>
-                  <Badge variant={event.completed ? "outline" : "destructive"}>
-                    {event.completed ? "Completed" : "Upcoming"}
+                  <span className="text-sm text-muted-foreground">
+                    {event.event_date ? new Date(event.event_date).toLocaleString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true
+                    }) : 'TBD'}
+                  </span>
+                  <Badge variant="outline">
+                    {event.event_date ? 'Scheduled' : 'Upcoming'}
                   </Badge>
                 </div>
               </CardContent>

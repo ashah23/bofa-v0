@@ -17,14 +17,15 @@ import {
 import { ArrowLeft, Calendar, Clock, Trophy } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { useState, useEffect } from "react"
+import { useState, useEffect, use } from "react"
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
 import { Timer } from "@/components/timer"
 import { TeamTimer } from "@/components/team-timer"
 import { ScoreInput } from "@/components/score-input"
 
-export default function EventPage({ params }: { params: { eventId: string } }) {
+export default function EventPage({ params }: { params: Promise<{ eventId: string }> }) {
+  const { eventId } = use(params)
   const [user, setUser] = useState<User | null>(null)
   const [matchups, setMatchups] = useState<Matchup[]>([])
   const [heats, setHeats] = useState<Heat[]>([])
@@ -37,7 +38,7 @@ export default function EventPage({ params }: { params: { eventId: string } }) {
     setUser(setCurrentUser("user-6")) // Default to referee for demo
   }, [])
 
-  const event = getEventById(params.eventId)
+  const event = getEventById(eventId)
 
   useEffect(() => {
     if (event) {
