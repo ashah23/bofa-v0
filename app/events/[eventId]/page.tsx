@@ -75,16 +75,20 @@ export default async function EventPage({ params }: { params: Promise<{ eventId:
                           <div className="flex justify-between items-center">
                             <div className="font-medium">Heat {match.heat_number}</div>
                             <Badge variant={
-                              match.heat_status === 'COMPLETED' ? 'default' :
-                                match.heat_status === 'IN_PROGRESS' ? 'secondary' :
-                                  'outline'
+                              match.heat_status === 'COMPLETED' ? 'destructive' :
+                                match.heat_status === 'IN_PROGRESS' ? 'default' :
+                                  'secondary'
+                            } className={
+                              match.heat_status === 'IN_PROGRESS' ? 'bg-green-300 hover:bg-green-400' :
+                                match.heat_status === 'COMPLETED' ? 'bg-orange-300 hover:bg-orange-400' :
+                                  'bg-blue-300 hover:bg-blue-400'
                             }>
                               {match.heat_status === 'COMPLETED' ? 'Completed' :
                                 match.heat_status === 'IN_PROGRESS' ? 'In Progress' :
                                   'Scheduled'}
                             </Badge>
                           </div>
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
                             {match.team1_name && (
                               <div className="flex justify-between items-center">
                                 <span>{match.team1_name}</span>
