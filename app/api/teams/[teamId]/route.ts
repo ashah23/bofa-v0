@@ -9,15 +9,17 @@ export async function GET(
     { params }: { params: { teamId: string } }
 ) {
     try {
+        const teamId = await Promise.resolve(params.teamId);
+
         // Get team details
         const teamResult = await pool.query(`
             SELECT t.team_id, t.team_name, t.created_at,
-                   COALESCE(SUM(CASE WHEN er.winner_team_id = t.team_id THEN 1 ELSE 0 END), 0) as points
+                   COALESCE(SUM(CASE WHEN h.winner_team_id = t.team_id THEN 1 ELSE 0 END), 0) as points
             FROM teams t
-            LEFT JOIN event_results er ON t.team_id = er.winner_team_id
+            LEFT JOIN head_to_head_matches h ON t.team_id = h.winner_team_id
             WHERE t.team_id = $1
             GROUP BY t.team_id, t.team_name, t.created_at
-        `, [params.teamId]);
+        `, [teamId]);
 
         if (teamResult.rows.length === 0) {
             return NextResponse.json({
@@ -28,11 +30,12 @@ export async function GET(
 
         // Get players for this team
         const playersResult = await pool.query(`
-            SELECT player_id, player_name, email, created_at
+            SELECT player_id, player_name, email, created_at,
+                   athleticism, alcohol_tolerance, reading_comprehension
             FROM players
             WHERE team_id = $1
             ORDER BY player_name
-        `, [params.teamId]);
+        `, [teamId]);
 
         const team = {
             ...teamResult.rows[0],

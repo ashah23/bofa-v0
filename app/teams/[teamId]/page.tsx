@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Medal, User } from "lucide-react"
+import { ArrowLeft, Medal } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { TeamPlayers } from "@/components/team-players"
 
 async function getTeamWithPlayers(teamId: string) {
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/teams/${teamId}`, { cache: 'no-store' });
@@ -39,20 +40,7 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
           <CardDescription>Team Members</CardDescription>
         </CardHeader>
         <CardContent>
-          <ul className="space-y-2">
-            {team.players?.map((player: any) => (
-              <li key={player.player_id} className="flex items-center p-2 rounded-md hover:bg-muted">
-                <User className="h-5 w-5 mr-3 text-muted-foreground" />
-                <div>
-                  <div className="font-medium">{player.player_name}</div>
-                  <div className="text-sm text-muted-foreground">{player.email}</div>
-                </div>
-              </li>
-            ))}
-            {(!team.players || team.players.length === 0) && (
-              <li className="text-muted-foreground text-center py-4">No players assigned to this team yet.</li>
-            )}
-          </ul>
+          <TeamPlayers players={team.players} />
         </CardContent>
       </Card>
     </div>
