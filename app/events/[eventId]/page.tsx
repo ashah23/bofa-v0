@@ -3,7 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { Badge } from "@/components/ui/badge"
+import { HeatCard } from "@/components/heat-card"
+import { startHeat, completeHeat, completeHeatEvent } from "./actions"
 
 async function getEventDetails(eventId: string) {
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events/${eventId}`, {
@@ -37,14 +38,32 @@ async function getHeatMatches(eventId: string) {
   return data.matches || [];
 }
 
+async function getEventStandings(eventId: string) {
+  const url = `${process.env.NEXT_PUBLIC_API_URL}/api/events/${eventId}/standings`;
+  const res = await fetch(url, {
+    cache: 'no-store',
+    next: { revalidate: 0 }
+  });
+
+  if (!res.ok) {
+    return null;
+  }
+
+  const data = await res.json();
+  return data.standings || null;
+}
+
 export default async function EventPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params;
   const event = await getEventDetails(eventId)
   const heatMatches = event.event_type === 'HEAT' ? await getHeatMatches(eventId) : null
+  const standings = event.event_status === 'COMPLETED' ? await getEventStandings(eventId) : null
 
   if (!event) {
     notFound()
   }
+
+  const allHeatsCompleted = heatMatches?.every((match: any) => match.heat_status === 'COMPLETED')
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -57,81 +76,74 @@ export default async function EventPage({ params }: { params: Promise<{ eventId:
 
       <Card className="mb-8">
         <CardHeader>
-          <CardTitle className="text-3xl">{event.event_name}</CardTitle>
-          <CardDescription>
-            {event.event_type === 'HEAT' ? 'Heat-based Event' : 'Head-to-Head Event'}
-          </CardDescription>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="text-3xl">{event.event_name}</CardTitle>
+              <CardDescription>
+                {event.event_type === 'HEAT' ? 'Heat-based Event' : 'Head-to-Head Event'}
+              </CardDescription>
+            </div>
+            {event.event_type === 'HEAT' && allHeatsCompleted && event.event_status !== 'COMPLETED' && (
+              <form action={async (formData: FormData) => {
+                'use server'
+                const eventId = formData.get('eventId') as string
+                await completeHeatEvent(eventId)
+              }}>
+                <input type="hidden" name="eventId" value={eventId} />
+                <Button type="submit" variant="default">
+                  Complete Event & Calculate Standings
+                </Button>
+              </form>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {event.event_type === 'HEAT' ? (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Heat Matches</h3>
-              {heatMatches && heatMatches.length > 0 ? (
-                <div className="grid gap-4">
-                  {heatMatches.map((match: any) => (
-                    <Card key={match.heat_id}>
-                      <CardContent className="pt-6">
-                        <div className="space-y-4">
-                          <div className="flex justify-between items-center">
-                            <div className="font-medium">Heat {match.heat_number}</div>
-                            <Badge variant={
-                              match.heat_status === 'COMPLETED' ? 'destructive' :
-                                match.heat_status === 'IN_PROGRESS' ? 'default' :
-                                  'secondary'
-                            } className={
-                              match.heat_status === 'IN_PROGRESS' ? 'bg-green-300 hover:bg-green-400' :
-                                match.heat_status === 'COMPLETED' ? 'bg-orange-300 hover:bg-orange-400' :
-                                  'bg-blue-300 hover:bg-blue-400'
-                            }>
-                              {match.heat_status === 'COMPLETED' ? 'Completed' :
-                                match.heat_status === 'IN_PROGRESS' ? 'In Progress' :
-                                  'Scheduled'}
-                            </Badge>
-                          </div>
-                          <div className="space-y-2">
-                            {match.team1_name && (
-                              <div className="flex justify-between items-center">
-                                <span>{match.team1_name}</span>
-                                <span className="text-muted-foreground">
-                                  {match.team1_time ? `${match.team1_time}s` : 'Pending'}
-                                </span>
-                              </div>
-                            )}
-                            {match.team2_name && (
-                              <div className="flex justify-between items-center">
-                                <span>{match.team2_name}</span>
-                                <span className="text-muted-foreground">
-                                  {match.team2_time ? `${match.team2_time}s` : 'Pending'}
-                                </span>
-                              </div>
-                            )}
-                            {match.team3_name && (
-                              <div className="flex justify-between items-center">
-                                <span>{match.team3_name}</span>
-                                <span className="text-muted-foreground">
-                                  {match.team3_time ? `${match.team3_time}s` : 'Pending'}
-                                </span>
-                              </div>
-                            )}
-                            {match.team4_name && (
-                              <div className="flex justify-between items-center">
-                                <span>{match.team4_name}</span>
-                                <span className="text-muted-foreground">
-                                  {match.team4_time ? `${match.team4_time}s` : 'Pending'}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-muted-foreground text-center py-4">
-                  No heat matches recorded yet.
+            <div className="space-y-8">
+              {standings && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Final Standings</h3>
+                  <div className="rounded-md border">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b bg-muted/50">
+                          <th className="h-12 px-4 text-left align-middle font-medium">Rank</th>
+                          <th className="h-12 px-4 text-left align-middle font-medium">Team</th>
+                          <th className="h-12 px-4 text-right align-middle font-medium">Points</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {standings.map((standing: any) => (
+                          <tr key={standing.team_name} className="border-b transition-colors hover:bg-muted/50">
+                            <td className="p-4 align-middle">{standing.rank}</td>
+                            <td className="p-4 align-middle font-medium">{standing.team_name}</td>
+                            <td className="p-4 align-middle text-right">{standing.point_value}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Heat Matches</h3>
+                {heatMatches && heatMatches.length > 0 ? (
+                  <div className="grid gap-4">
+                    {heatMatches.map((match: any) => (
+                      <HeatCard
+                        key={match.heat_id}
+                        heat={match}
+                        onStartHeat={startHeat}
+                        onCompleteHeat={completeHeat}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-muted-foreground text-center py-4">
+                    No heat matches recorded yet.
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
             <div className="text-muted-foreground text-center py-4">

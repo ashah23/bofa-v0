@@ -5,15 +5,17 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(
     request: Request,
-    { params }: { params: { eventId: string } }
+    { params }: { params: Promise<{ eventId: string }> }
 ) {
     try {
+        const { eventId } = await params
+
         // First check if the event exists and is a heat event
         const eventCheck = await pool.query(`
             SELECT event_type 
             FROM events 
             WHERE event_id = $1
-        `, [params.eventId]);
+        `, [eventId]);
 
         if (eventCheck.rows.length === 0) {
             return NextResponse.json(
@@ -50,7 +52,7 @@ export async function GET(
             LEFT JOIN teams t4 ON hm.team4_id = t4.team_id
             WHERE hm.event_id = $1
             ORDER BY hm.heat_number ASC, hm.created_at ASC
-        `, [params.eventId])
+        `, [eventId])
 
         return NextResponse.json({ matches: rows })
     } catch (error) {

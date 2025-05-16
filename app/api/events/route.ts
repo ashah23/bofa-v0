@@ -7,7 +7,7 @@ export const runtime = 'nodejs';
 export async function GET() {
     try {
         const result = await pool.query(`
-            SELECT event_id, event_name, event_type, event_date, created_at
+            SELECT event_id, event_name, event_type, event_date, event_status, created_at
             FROM events
             ORDER BY event_date DESC, event_name
         `);

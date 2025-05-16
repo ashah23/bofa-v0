@@ -1,49 +1,71 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { formatTime } from "@/lib/data"
+import { Card, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 
 interface TeamTimerProps {
-  teamId: string
   teamName: string
+  onTimeSubmit: (time: number) => void
   isRunning: boolean
-  onStop: (teamId: string, time: number) => void
-  finishedTime?: number
+  startTime: number | null
+  onStop: () => void
 }
 
-export function TeamTimer({ teamId, teamName, isRunning, onStop, finishedTime }: TeamTimerProps) {
-  const [isStopped, setIsStopped] = useState(finishedTime !== undefined)
+export function TeamTimer({ teamName, onTimeSubmit, isRunning, startTime, onStop }: TeamTimerProps) {
+  const [time, setTime] = useState<number>(0)
+  const [displayTime, setDisplayTime] = useState<number>(0)
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout
+
+    if (isRunning && startTime) {
+      interval = setInterval(() => {
+        const elapsedTime = (Date.now() - startTime) / 1000
+        setDisplayTime(elapsedTime)
+      }, 10) // Update every 10ms for smooth display
+    }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval)
+      }
+    }
+  }, [isRunning, startTime])
 
   const handleStop = () => {
-    if (!isRunning) return
-    setIsStopped(true)
-    onStop(teamId, Date.now())
+    const finalTime = displayTime
+    setTime(finalTime)
+    onTimeSubmit(finalTime)
+    onStop()
   }
 
   return (
-    <Card className={`${isStopped ? "bg-muted/50" : ""}`}>
-      <CardHeader className="pb-2">
-        <CardTitle>{teamName}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex justify-between items-center">
-          <div>
-            {finishedTime !== undefined ? (
-              <div className="font-mono text-lg">{formatTime(finishedTime)}</div>
+    <Card>
+      <CardContent className="pt-6">
+        <div className="space-y-4">
+          <div className="font-medium">{teamName}</div>
+          <div className="text-2xl font-bold">{displayTime.toFixed(2)}s</div>
+          <div className="flex gap-2">
+            {isRunning ? (
+              <Button onClick={handleStop} variant="destructive">
+                Stop Timer
+              </Button>
             ) : (
-              <div className="font-mono text-lg">--:--:--</div>
+              <Input
+                type="number"
+                value={time}
+                onChange={(e) => {
+                  const newTime = Number(e.target.value)
+                  setTime(newTime)
+                  onTimeSubmit(newTime)
+                }}
+                step="0.01"
+                className="w-24"
+              />
             )}
           </div>
-          <Button
-            onClick={handleStop}
-            disabled={!isRunning || isStopped}
-            variant={isStopped ? "outline" : "destructive"}
-            size="sm"
-          >
-            {isStopped ? "Finished" : "Stop"}
-          </Button>
         </div>
       </CardContent>
     </Card>

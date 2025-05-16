@@ -45,8 +45,8 @@ export default async function EventsPage() {
                       hour12: true
                     }) : 'TBD'}
                   </span>
-                  <Badge variant="outline">
-                    {event.event_date ? 'Scheduled' : 'Upcoming'}
+                  <Badge variant={event.event_status === 'COMPLETED' ? 'default' : 'outline'}>
+                    {event.event_status || 'SCHEDULED'}
                   </Badge>
                 </div>
               </CardContent>

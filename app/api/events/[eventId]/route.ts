@@ -10,7 +10,7 @@ export async function GET(
     try {
         const { eventId } = await context.params;
         const result = await pool.query(`
-            SELECT event_id, event_name, event_type, event_date, created_at
+            SELECT event_id, event_name, event_type, event_date, event_status, created_at
             FROM events
             WHERE event_id = $1
         `, [eventId]);
