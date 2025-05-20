@@ -29,7 +29,7 @@ export default function Home() {
               <Beer className="h-8 w-8 text-amber-600" />
             </CardHeader>
             <CardContent>
-              <CardDescription className="text-base">Browse all head-to-head and heat-based events</CardDescription>
+              <CardDescription className="text-base">Browse all group-knockout and heat-based events</CardDescription>
             </CardContent>
             <CardFooter>
               <p className="text-sm text-muted-foreground">Check out the competition lineup</p>

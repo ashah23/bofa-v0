@@ -20,7 +20,7 @@ export type Team = {
   captainId?: string
 }
 
-export type EventType = "head-to-head" | "heat"
+export type EventType = "group-knockout" | "heat"
 
 export type MatchupStatus = "scheduled" | "in-progress" | "completed"
 
@@ -157,7 +157,7 @@ export const teams: Team[] = [
   },
 ]
 
-// Matchups data for head-to-head events
+// Matchups data for group-knockout events
 export const matchups: Matchup[] = [
   {
     id: "matchup-1",
@@ -268,7 +268,7 @@ export const events: Event[] = [
   {
     id: "event-1",
     name: "Beer Pong Tournament",
-    type: "head-to-head",
+    type: "group-knockout",
     description: "Teams face off in the classic game of beer pong. Best of three games advances.",
     pointsAwarded: 10,
     completed: false,
@@ -304,7 +304,7 @@ export const events: Event[] = [
   {
     id: "event-5",
     name: "Quarters Tournament",
-    type: "head-to-head",
+    type: "group-knockout",
     description: "Teams compete in the classic quarters drinking game. Single elimination.",
     pointsAwarded: 8,
     completed: false,
@@ -322,7 +322,7 @@ export const events: Event[] = [
   {
     id: "event-7",
     name: "Dizzy Bat",
-    type: "head-to-head",
+    type: "group-knockout",
     description: "Spin around a bat, then try to hit a ball. Best average distance wins.",
     pointsAwarded: 10,
     completed: false,
@@ -331,7 +331,7 @@ export const events: Event[] = [
   {
     id: "event-8",
     name: "Beer Trivia",
-    type: "head-to-head",
+    type: "group-knockout",
     description: "Teams answer questions about beer history, brewing, and culture.",
     pointsAwarded: 8,
     completed: false,

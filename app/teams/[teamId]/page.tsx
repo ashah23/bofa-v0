@@ -12,8 +12,9 @@ async function getTeamWithPlayers(teamId: string) {
   return data.team;
 }
 
-export default async function TeamPage({ params }: { params: { teamId: string } }) {
-  const team = await getTeamWithPlayers(params.teamId)
+export default async function TeamPage({ params }: { params: Promise<{ teamId: string }> }) {
+  const resolvedParams = await params;
+  const team = await getTeamWithPlayers(resolvedParams.teamId)
 
   if (!team) {
     notFound()

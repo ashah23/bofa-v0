@@ -1,40 +1,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Medal } from "lucide-react"
+import { Award, Medal, Skull } from "lucide-react"
 
 async function getStandings() {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/event-results`, { cache: 'no-store' });
-  if (!res.ok) throw new Error('Failed to fetch event results');
-  const data = await res.json();
+  // Get points data with team names in a single query
+  const pointsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/points`, { cache: 'no-store' });
+  if (!pointsRes.ok) throw new Error('Failed to fetch points');
+  const pointsData = await pointsRes.json();
 
-  // Calculate team points from results
-  const teamPoints = new Map();
-
-  data.results.forEach((result: any) => {
-    if (result.winner_team_id) {
-      const currentPoints = teamPoints.get(result.winner_team_id) || 0;
-      teamPoints.set(result.winner_team_id, currentPoints + 1);
-    }
-  });
-
-  // Get team names
-  const teamsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/teams`, { cache: 'no-store' });
-  if (!teamsRes.ok) throw new Error('Failed to fetch teams');
-  const teamsData = await teamsRes.json();
-
-  // Combine team data with points
-  const standings = teamsData.teams.map((team: any) => ({
+  const standings = pointsData.points.map((team: any, index: number) => ({
     team_id: team.team_id,
     name: team.team_name,
-    points: teamPoints.get(team.team_id) || 0
+    points: team.total_points,
+    rank: index + 1
   }));
 
-  // Sort by points and add rank
-  return standings
-    .sort((a: any, b: any) => b.points - a.points)
-    .map((team: any, index: number) => ({
-      ...team,
-      rank: index + 1
-    }));
+  return standings;
 }
 
 export default async function StandingsPage() {
@@ -42,7 +22,7 @@ export default async function StandingsPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Standings</h1>
+      <h1 className="text-3xl font-bold mb-4">Standings</h1>
 
       <Card>
         <CardHeader>
@@ -60,13 +40,40 @@ export default async function StandingsPage() {
               </thead>
               <tbody>
                 {standings.map((team: any) => (
-                  <tr key={team.team_id} className="border-b hover:bg-muted/50">
+                  <tr
+                    key={team.team_id}
+                    className={`border-b hover:bg-muted/50 ${team.rank === 1 ? 'bg-yellow-50' :
+                      team.rank === 2 ? 'bg-gray-50' :
+                        team.rank === 3 ? 'bg-amber-50' : ''
+                      }`}
+                  >
                     <td className="py-3 px-4">
                       <div className="flex items-center">
-                        {team.rank === 1 && <Medal className="h-5 w-5 text-yellow-500 mr-2" />}
-                        {team.rank === 2 && <Medal className="h-5 w-5 text-gray-400 mr-2" />}
-                        {team.rank === 3 && <Medal className="h-5 w-5 text-amber-700 mr-2" />}
-                        {team.rank && team.rank > 3 && <span className="w-5 mr-2">{team.rank}</span>}
+                        {team.rank === 1 && (
+                          <div className="flex items-center">
+                            <Medal className="h-6 w-6 text-yellow-500 mr-2" />
+                            <span className="font-bold text-yellow-600">1st</span>
+                          </div>
+                        )}
+                        {team.rank === 2 && (
+                          <div className="flex items-center">
+                            <Award className="h-6 w-6 text-gray-400 mr-2" />
+                            <span className="font-bold text-gray-600">2nd</span>
+                          </div>
+                        )}
+                        {team.rank === 3 && (
+                          <div className="flex items-center">
+                            <Award className="h-6 w-6 text-amber-700 mr-2" />
+                            <span className="font-bold text-amber-700">3rd</span>
+                          </div>
+                        )}
+                        {team.rank > 3 && team.rank < 12 && <span className="w-5 mr-2">{team.rank}</span>}
+                        {team.rank == 12 && (
+                          <div className="flex items-center">
+                            <Skull className="h-6 w-6  mr-2" />
+                            <span className="font-bold">Last</span>
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="py-3 px-4 font-medium">{team.name}</td>

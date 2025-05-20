@@ -83,4 +83,27 @@ export async function completeHeatEvent(eventId: string) {
         console.error('Error in completeHeatEvent:', error)
         throw error
     }
+}
+
+export async function resetHeatEvent(eventId: string) {
+    try {
+        console.log('Resetting heat event:', eventId)
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events/${eventId}/reset`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+
+        if (!response.ok) {
+            const errorData = await response.json()
+            console.error('Failed to reset heat event:', errorData)
+            throw new Error(errorData.error || 'Failed to reset heat event')
+        }
+
+        revalidatePath('/events/[eventId]')
+    } catch (error) {
+        console.error('Error in resetHeatEvent:', error)
+        throw error
+    }
 } 

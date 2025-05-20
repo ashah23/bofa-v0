@@ -6,10 +6,11 @@ export const runtime = 'nodejs';
 
 export async function GET(
     request: Request,
-    { params }: { params: { teamId: string } }
+    { params }: { params: Promise<{ teamId: string }> }
 ) {
     try {
-        const teamId = await Promise.resolve(params.teamId);
+        const resolvedParams = await params;
+        const teamId = resolvedParams.teamId;
 
         // Get team details
         const teamResult = await pool.query(`
