@@ -3,8 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowLeft, Award, Medal } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { HeatCard } from "@/components/heat-card"
-import { startHeat, completeHeat, completeHeatEvent, resetHeatEvent } from "./heat_actions"
+import { startMatch, completeMatch, completeMatchEvent, resetMatchEvent } from "./group_actions"
 
 async function getEventDetails(eventId: string) {
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events/${eventId}`, {
@@ -16,8 +15,8 @@ async function getEventDetails(eventId: string) {
   return data.event;
 }
 
-async function getHeatMatches(eventId: string) {
-  const url = `${process.env.NEXT_PUBLIC_API_URL}/api/events/${eventId}/heat-matches`;
+async function getGroupMatches(eventId: string) {
+  const url = `${process.env.NEXT_PUBLIC_API_URL}/api/events/${eventId}/group-ko-matches`;
   const res = await fetch(url, {
     cache: 'no-store',
     next: { revalidate: 0 }
@@ -56,14 +55,14 @@ async function getEventStandings(eventId: string) {
 export default async function EventPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params;
   const event = await getEventDetails(eventId)
-  const heatMatches = event.event_type === 'HEAT' ? await getHeatMatches(eventId) : null
+  const groupMatches = await getGroupMatches(eventId)
   const standings = event.event_status === 'COMPLETED' ? await getEventStandings(eventId) : null
 
   if (!event) {
     notFound()
   }
 
-  const allHeatsCompleted = heatMatches?.every((match: any) => match.heat_status === 'COMPLETED')
+  const allMatchesCompleted = groupMatches?.every((match: any) => match.match_status === 'COMPLETED')
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -80,15 +79,15 @@ export default async function EventPage({ params }: { params: Promise<{ eventId:
             <div>
               <CardTitle className="text-3xl">{event.event_name}</CardTitle>
               <CardDescription>
-                {event.event_type === 'HEAT' ? 'Heat-based Event' : 'Group & Knockout Event'}
+                {'Group & Knockout Event'}
               </CardDescription>
             </div>
             <div className="flex gap-4">
-              {event.event_type === 'HEAT' && allHeatsCompleted && event.event_status !== 'COMPLETED' && (
+              {allMatchesCompleted && event.event_status !== 'COMPLETED' && (
                 <form action={async (formData: FormData) => {
                   'use server'
                   const eventId = formData.get('eventId') as string
-                  await completeHeatEvent(eventId)
+                  await completeMatchEvent(eventId)
                 }}>
                   <input type="hidden" name="eventId" value={eventId} />
                   <Button type="submit" variant="default">
@@ -96,11 +95,11 @@ export default async function EventPage({ params }: { params: Promise<{ eventId:
                   </Button>
                 </form>
               )}
-              {event.event_type === 'HEAT' && event.event_status === 'COMPLETED' && (
+              {event.event_status === 'COMPLETED' && (
                 <form action={async (formData: FormData) => {
                   'use server'
                   const eventId = formData.get('eventId') as string
-                  await resetHeatEvent(eventId)
+                  await resetMatchEvent(eventId)
                 }}>
                   <input type="hidden" name="eventId" value={eventId} />
                   <Button type="submit" variant="destructive">
@@ -112,7 +111,6 @@ export default async function EventPage({ params }: { params: Promise<{ eventId:
           </div>
         </CardHeader>
         <CardContent>
-          {event.event_type === 'HEAT' ? (
             <div className="space-y-8">
               {standings && (
                 <div className="space-y-4">
@@ -146,7 +144,7 @@ export default async function EventPage({ params }: { params: Promise<{ eventId:
                           </div>
                         </div>
 
-                        {/* 3rd Place */}
+                        {/* 3rd Place */} 
                         <div className="w-1/3 h-[120px] bg-amber-100 rounded-t-xl flex flex-col items-center justify-center relative">
                           <Award className="h-8 w-8 text-amber-700 mb-2" />
                           <span className="font-bold text-amber-700">{standings[2]?.team_name}</span>
@@ -186,30 +184,18 @@ export default async function EventPage({ params }: { params: Promise<{ eventId:
               )}
 
               <h3 className="text-lg font-semibold">Heat Matches</h3>
-              {heatMatches && heatMatches.length > 0 ? (
+              {groupMatches && groupMatches.length > 0 ? (
                 <div className="grid gap-4">
-                  {heatMatches.map((match: any) => (
-                    <HeatCard
-                      key={match.heat_id}
-                      heat={match}
-                      onStartHeat={startHeat}
-                      onCompleteHeat={completeHeat}
-                    />
+                  {groupMatches.map((match: any) => (
+                    <p>hi</p>
                   ))}
                 </div>
               ) : (
                 <div className="text-muted-foreground text-center py-4">
-                  No heat matches recorded yet.
+                  No matches recorded yet.
                 </div>
               )}
             </div>
-          ) : (
-            <div className="text-center text-muted-foreground py-8">
-              <Link href={`/group-knockout?eventId=${eventId}`} className="text-primary hover:underline">
-                View Group & Knockout Details
-              </Link>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>

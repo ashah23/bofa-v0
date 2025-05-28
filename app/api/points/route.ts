@@ -27,3 +27,7 @@ export async function GET() {
         }, { status: 500 });
     }
 } 
+
+export async function POST(team_id: number, point_value: number, type: string, comment: string) {
+    
+}
