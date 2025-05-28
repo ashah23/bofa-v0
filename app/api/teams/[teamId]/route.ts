@@ -11,13 +11,11 @@ export async function GET(
     try {
         const resolvedParams = await params;
         const teamId = resolvedParams.teamId;
-
         // Get team details
         const teamResult = await pool.query(`
-            SELECT t.team_id, t.team_name, t.created_at,
-                   COALESCE(SUM(CASE WHEN h.winner_team_id = t.team_id THEN 1 ELSE 0 END), 0) as points
+            SELECT t.team_id, t.team_name, t.created_at, SUM(p.point_value) as total_points
             FROM teams t
-            LEFT JOIN head_to_head_matches h ON t.team_id = h.winner_team_id
+            LEFT JOIN points p ON t.team_id = p.team_id
             WHERE t.team_id = $1
             GROUP BY t.team_id, t.team_name, t.created_at
         `, [teamId]);
@@ -38,9 +36,24 @@ export async function GET(
             ORDER BY player_name
         `, [teamId]);
 
+        // Get detailed points breakdown
+        const pointsResult = await pool.query(`
+            SELECT 
+                p.point_value,
+                p.comments,
+                p.updated_at,
+                p.point_type,
+                COALESCE(e.event_name, 'General') as event_name
+            FROM points p
+            LEFT JOIN events e ON p.event_id = e.event_id
+            WHERE p.team_id = $1
+            ORDER BY p.updated_at DESC
+        `, [teamId]);
+
         const team = {
             ...teamResult.rows[0],
-            players: playersResult.rows
+            players: playersResult.rows,
+            points_history: pointsResult.rows
         };
 
         return NextResponse.json({
@@ -48,7 +61,6 @@ export async function GET(
             team
         });
     } catch (error) {
-        console.error('Error fetching team:', error);
         return NextResponse.json({
             success: false,
             message: 'Failed to fetch team',
