@@ -1,107 +1,34 @@
-INSERT INTO double_elimination_matches (match_id, bracket_type, round, match_order)
-VALUES
-(1, 'winner', 1, 1),
-(2, 'winner', 1, 2),
-(3, 'winner', 1, 3),
-(4, 'winner', 1, 4),
-(5, 'winner', 2, 1),
-(6, 'winner', 2, 2),
-(7, 'winner', 2, 3),
-(8, 'winner', 2, 4),
-(9, 'winner', 3, 1),
-(10, 'winner', 3, 2),
-(11, 'winner', 4, 1),
-(12, 'loser', 1, 1),
-(13, 'loser', 1, 2),
-(14, 'loser', 2, 1),
-(15, 'loser', 2, 2),
-(16, 'loser', 3, 1),
-(17, 'loser', 3, 2),
-(18, 'loser', 4, 1),
-(19, 'loser', 5, 1),
-(20, 'grand_final', 1, 1);
+-- Winner's Bracket
+INSERT INTO double_elim_matches (match_id, event_id, round, match_number, bracket, team1_id, team2_id, next_match_win_id, next_match_win_slot, next_match_lose_id, next_match_lose_slot) VALUES
+-- Round 1 (Winners)
+(1, 1, 1, 1, 'W', 5, 12, 5, 1, 9, 1),
+(2, 1, 1, 2, 'W', 6, 11, 5, 2, 9, 2),
+(3, 1, 1, 3, 'W', 7, 10, 6, 1, 10, 1),
+(4, 1, 1, 4, 'W', 8, 9, 6, 2, 10, 2),
 
+-- Round 2 (Winners)
+(5, 1, 2, 1, 'W', NULL, NULL, 7, 1, 11, 1),
+(6, 1, 2, 2, 'W', NULL, NULL, 7, 2, 11, 2),
 
-UPDATE double_elimination_matches SET
-  next_match_id_winner = 5, next_match_slot_winner = 1,
-  next_match_id_loser  = 12, next_match_slot_loser  = 1
-WHERE match_id = 1;
+-- Semifinal (Winners)
+(7, 1, 3, 1, 'W', NULL, NULL, 13, 1, 12, 2),
 
+-- Final (Winners)
+(13, 1, 4, 1, 'W', NULL, NULL, 15, 1, NULL, NULL),
 
-UPDATE double_elimination_matches SET
-  next_match_id_winner = 5, next_match_slot_winner = 2,
-  next_match_id_loser  = 12, next_match_slot_loser  = 2
-WHERE match_id = 2;
+-- Loser's Bracket
+-- Round 1 (L)
+(9, 1, -1, 1, 'L', NULL, NULL, 11, 1, NULL, NULL),
+(10, 1, -1, 2, 'L', NULL, NULL, 11, 2, NULL, NULL),
 
+-- Round 2 (L)
+(11, 1, -2, 1, 'L', NULL, NULL, 12, 1, NULL, NULL),
 
-UPDATE double_elimination_matches SET
-  next_match_id_winner = 6, next_match_slot_winner = 1,
-  next_match_id_loser  = 13, next_match_slot_loser  = 1
-WHERE match_id = 3;
+-- Round 3 (L)
+(12, 1, -3, 1, 'L', NULL, NULL, 14, 1, NULL, NULL),
 
+-- Loser's Final
+(14, 1, -4, 1, 'L', NULL, NULL, 15, 2, NULL, NULL),
 
-UPDATE double_elimination_matches SET
-  next_match_id_winner = 6, next_match_slot_winner = 2,
-  next_match_id_loser  = 13, next_match_slot_loser  = 2
-WHERE match_id = 4;
-
-
-UPDATE double_elimination_matches SET
-  next_match_id_winner = 9, next_match_slot_winner = 1,
-  next_match_id_loser  = 14, next_match_slot_loser  = 1
-WHERE match_id = 5;
-
-
-UPDATE double_elimination_matches SET
-  next_match_id_winner = 9, next_match_slot_winner = 2,
-  next_match_id_loser  = 14, next_match_slot_loser  = 2
-WHERE match_id = 6;
-
-
-UPDATE double_elimination_matches SET
-  next_match_id_winner = 10, next_match_slot_winner = 1,
-  next_match_id_loser  = 15, next_match_slot_loser  = 1
-WHERE match_id = 7;
-
-
-UPDATE double_elimination_matches SET
-  next_match_id_winner = 10, next_match_slot_winner = 2,
-  next_match_id_loser  = 15, next_match_slot_loser  = 2
-WHERE match_id = 8;
-
-
-UPDATE double_elimination_matches SET
-  next_match_id_winner = 11, next_match_slot_winner = 1,
-  next_match_id_loser  = 16, next_match_slot_loser  = 1
-WHERE match_id = 9;
-
-
-UPDATE double_elimination_matches SET
-  next_match_id_winner = 11, next_match_slot_winner = 2,
-  next_match_id_loser  = 16, next_match_slot_loser  = 2
-WHERE match_id = 10;
-
-
-UPDATE double_elimination_matches SET
-  next_match_id_winner = 20, next_match_slot_winner = 1
-WHERE match_id = 11;
-
-
-UPDATE double_elimination_matches SET
-  next_match_id_winner = 17, next_match_slot_winner = 1
-WHERE match_id = 16;
-
-
-UPDATE double_elimination_matches SET
-  next_match_id_winner = 18, next_match_slot_winner = 1
-WHERE match_id = 17;
-
-
-UPDATE double_elimination_matches SET
-  next_match_id_winner = 19, next_match_slot_winner = 1
-WHERE match_id = 18;
-
-
-UPDATE double_elimination_matches SET
-  next_match_id_winner = 20, next_match_slot_winner = 2
-WHERE match_id = 19;
+-- Grand Final
+(15, 1, 0, 1, 'F', NULL, NULL, NULL, NULL, NULL, NULL);

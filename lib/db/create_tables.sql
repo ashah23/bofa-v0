@@ -5,27 +5,19 @@ CREATE TABLE players (created_at timestamp without time zone, player_name charac
 CREATE TABLE points (updated_at timestamp without time zone, point_type text, comments text, point_value integer, team_id integer, id integer NOT NULL, event_id integer);
 CREATE TABLE teams (team_id integer NOT NULL, team_name character varying(100) NOT NULL, created_at timestamp without time zone);
 CREATE TABLE users (email text NOT NULL, role text, password text, user_id text NOT NULL);
-CREATE TABLE double_elimination_matches (
+CREATE TABLE double_elim_matches (
     match_id SERIAL PRIMARY KEY,
-    bracket_type VARCHAR(20) NOT NULL CHECK (bracket_type IN ('winner', 'loser', 'grand_final')),
-    round INT NOT NULL,
-    match_order INT NOT NULL,
-
+    event_id INT NOT NULL,
+    round INT NOT NULL, -- positive = winner's bracket, negative = loser's bracket, 0 = grand final
+    match_number INT NOT NULL, -- within each round
+    bracket VARCHAR(10) NOT NULL CHECK (bracket IN ('W', 'L', 'F')), -- Winner, Loser, Final
     team1_id INT,
     team2_id INT,
-    team1_score INT,
-    team2_score INT,
-    winner_id INT,
-
-    next_match_id_winner INT,
-    next_match_slot_winner INT CHECK (next_match_slot_winner IN (1, 2)),
-
-    next_match_id_loser INT,
-    next_match_slot_loser INT CHECK (next_match_slot_loser IN (1, 2)),
-
-    FOREIGN KEY (team1_id) REFERENCES teams(team_id),
-    FOREIGN KEY (team2_id) REFERENCES teams(team_id),
-    FOREIGN KEY (winner_id) REFERENCES teams(team_id),
-    FOREIGN KEY (next_match_id_winner) REFERENCES double_elimination_matches(match_id),
-    FOREIGN KEY (next_match_id_loser) REFERENCES double_elimination_matches(match_id)
+    winner_id INT, -- NULL until match is played
+    loser_id INT,  -- can help with tracking
+    next_match_win_id INT, -- points to the next match if team wins
+    next_match_win_slot INT, -- 1 or 2 (team1 or team2) in next match
+    next_match_lose_id INT, -- points to the next match if team loses
+    next_match_lose_slot INT, -- 1 or 2 in that match
+    played_at TIMESTAMP
 );

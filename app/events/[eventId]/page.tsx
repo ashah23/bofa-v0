@@ -81,10 +81,10 @@ export default async function EventPage({ params }: { params: Promise<{ eventId:
       {event.event_type === 'HEAT' && (
         <HeatEventView event={event} heatMatches={heatMatches} standings={standings} eventId={eventId} />
       )}
-      {event.event_type === 'DOUBLE_ELIMINATION' && (
+      {event.event_type === 'DOUBLE-ELIM' && (
         <DoubleEliminationEventView event={event} eventId={eventId} />
       )}
-      {event.event_type !== 'HEAT' && event.event_type !== 'DOUBLE_ELIMINATION' && (
+      {event.event_type !== 'HEAT' && event.event_type !== 'DOUBLE-ELIM' && (
         <GroupKnockoutEventView event={event} eventId={eventId} />
       )}
     </div>
