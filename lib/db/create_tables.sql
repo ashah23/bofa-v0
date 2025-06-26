@@ -21,3 +21,11 @@ CREATE TABLE double_elim_matches (
     next_match_lose_slot INT, -- 1 or 2 in that match
     played_at TIMESTAMP
 );
+
+CREATE TABLE slam_drunk (
+    id SERIAL PRIMARY KEY,
+    player_id INT NOT NULL,
+    twos SMALLINT,
+    fives SMALLINT,
+    tens SMALLINT
+);

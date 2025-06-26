@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { HeatEventView } from "@/components/heat-event-view"
 import { DoubleEliminationEventView } from "@/components/double-elimination-event-view"
 import { GroupKnockoutEventView } from "@/components/group-knockout-event-view"
@@ -60,6 +60,11 @@ export default async function EventPage({ params }: { params: Promise<{ eventId:
 
   if (!event) {
     notFound()
+  }
+
+  // Redirect individual events to the individual page
+  if (event.event_type === 'INDIVIDUAL') {
+    redirect(`/events/${eventId}/individual`)
   }
 
   let heatMatches = null;

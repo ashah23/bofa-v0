@@ -19,7 +19,7 @@ export async function startHeat(heatId: string) {
             throw new Error(errorData.error || 'Failed to start heat')
         }
 
-        revalidatePath('/events/[eventId]')
+        revalidatePath('/events/[eventId]', 'page')
     } catch (error) {
         console.error('Error in startHeat:', error)
         throw error
@@ -55,7 +55,7 @@ export async function completeHeat(heatId: string, times: { [key: string]: numbe
             throw new Error(errorData.error || 'Failed to complete heat')
         }
 
-        revalidatePath('/events/[eventId]')
+        revalidatePath('/events/[eventId]', 'page')
     } catch (error) {
         console.error('Error in completeHeat:', error)
         throw error
@@ -78,7 +78,7 @@ export async function completeHeatEvent(eventId: string) {
             throw new Error(errorData.error || 'Failed to complete heat event')
         }
 
-        revalidatePath('/events/[eventId]')
+        revalidatePath('/events/[eventId]', 'page')
     } catch (error) {
         console.error('Error in completeHeatEvent:', error)
         throw error
@@ -101,7 +101,7 @@ export async function resetHeatEvent(eventId: string) {
             throw new Error(errorData.error || 'Failed to reset heat event')
         }
 
-        revalidatePath('/events/[eventId]')
+        revalidatePath('/events/[eventId]', 'page')
     } catch (error) {
         console.error('Error in resetHeatEvent:', error)
         throw error
