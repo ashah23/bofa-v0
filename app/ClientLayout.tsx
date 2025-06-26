@@ -32,20 +32,20 @@ export default function ClientLayout({
     <html lang="en">
       <body className={inter.className}>
         <header className="border-b">
-          <div className="container mx-auto px-4 py-4">
+          <div className="container mx-auto px-4 py-3 md:py-4">
             <nav className="flex items-center justify-between">
               <Link href="/" className="flex items-center space-x-2">
-                <Beer className="h-6 w-6 text-amber-600" />
-                <span className="text-xl font-bold">Beer Olympics</span>
+                <Beer className="h-5 w-5 md:h-6 md:w-6 text-amber-600" />
+                <span className="text-lg md:text-xl font-bold">Beer Olympics</span>
               </Link>
-              <div className="flex items-center space-x-6">
-                <Link href="/standings" className="text-sm font-medium hover:underline">
+              <div className="flex items-center space-x-4 md:space-x-6">
+                <Link href="/standings" className="text-xs md:text-sm font-medium hover:underline">
                   Standings
                 </Link>
-                <Link href="/events" className="text-sm font-medium hover:underline">
+                <Link href="/events" className="text-xs md:text-sm font-medium hover:underline">
                   Events
                 </Link>
-                <Link href="/teams" className="text-sm font-medium hover:underline">
+                <Link href="/teams" className="text-xs md:text-sm font-medium hover:underline">
                   Teams
                 </Link>
                 <UserNav user={user} onLogin={handleLogin} />

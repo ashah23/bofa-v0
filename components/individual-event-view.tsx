@@ -199,81 +199,64 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
         </TabsList>
 
         <TabsContent value="team-standings" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Team Standings
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {teamStandings.map((team, index) => (
-                  <div
-                    key={team.team_id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        {getRankIcon(index + 1)}
-                        {getRankBadge(index + 1)}
-                      </div>
-                      <div>
-                        <div className="font-semibold">{team.team_name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {team.player_count} players • {team.twos} twos • {team.fives} fives • {team.tens} tens
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {teamStandings.map((team, index) => (
+              <div key={team.team_id} className="relative">
+                {/* Rank Badge positioned on top of card */}
+                <div className="absolute -top-2 -left-2 z-10">
+                  {getRankBadge(index + 1)}
+                </div>
+                
+                <Card className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="pt-2">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="font-semibold text-lg">{team.team_name}</div>
+                        <div className="text-xl font-bold text-primary">
+                          {team.total_points} pts
                         </div>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-primary">
-                        {team.total_points} pts
+                      <div className="text-sm text-muted-foreground">
+                        {team.twos} twos • {team.fives} fives • {team.tens} tens
                       </div>
                     </div>
-                  </div>
-                ))}
+                  </CardContent>
+                </Card>
               </div>
-            </CardContent>
-          </Card>
+            ))}
+          </div>
         </TabsContent>
 
         <TabsContent value="top-performers" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="h-5 w-5" />
-                Top Performers
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {players.map((player, index) => (
-                  <div
-                    key={player.player_id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        {getRankIcon(index + 1)}
-                        {getRankBadge(index + 1)}
-                      </div>
-                      <div>
-                        <div className="font-semibold">{player.player_name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {player.twos} twos • {player.fives} fives • {player.tens} tens
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {players.map((player, index) => (
+              <div key={player.player_id} className="relative">
+                {/* Rank Badge positioned on top of card */}
+                <div className="absolute -top-2 -left-2 z-10">
+                  {getRankBadge(index + 1)}
+                </div>
+                
+                <Card className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="pt-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="font-semibold text-lg">{player.player_name}</div>
+                        <div className="text-xl font-bold text-primary">
+                          {player.total_points} pts
                         </div>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-primary">
-                        {player.total_points} pts
+                      <div className="text-sm text-muted-foreground mb-2">
+                        {player.team_name || 'No Team'}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {player.twos} twos • {player.fives} fives • {player.tens} tens
                       </div>
                     </div>
-                  </div>
-                ))}
+                  </CardContent>
+                </Card>
               </div>
-            </CardContent>
-          </Card>
+            ))}
+          </div>
         </TabsContent>
 
         <TabsContent value="scores" className="space-y-4">

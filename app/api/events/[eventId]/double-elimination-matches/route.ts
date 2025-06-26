@@ -84,10 +84,28 @@ export async function GET(
       }
     }
 
+    // Get team names for all teams in the standings
+    const teamIds = Object.keys(lossMap).map(id => parseInt(id));
+    let teamNames: Record<number, string> = {};
+    
+    if (teamIds.length > 0) {
+      const teamNamesRes = await pool.query(`
+        SELECT team_id, team_name 
+        FROM teams 
+        WHERE team_id = ANY($1)
+      `, [teamIds]);
+      
+      teamNames = teamNamesRes.rows.reduce((acc, team) => {
+        acc[team.team_id] = team.team_name;
+        return acc;
+      }, {} as Record<number, string>);
+    }
+
     // Sort teams: most wins, fewest losses, lastMatchId (descending)
     const standings = Object.entries(lossMap)
       .map(([teamId, data]) => ({ 
         teamId: parseInt(teamId), 
+        teamName: teamNames[parseInt(teamId)] || `Team ${teamId}`,
         ...data 
       }))
       .sort((a, b) => {

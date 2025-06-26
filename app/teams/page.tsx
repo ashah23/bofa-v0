@@ -13,23 +13,23 @@ export default async function TeamsPage() {
   const teams = await getTeams();
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Teams</h1>
+    <div className="container mx-auto px-4 py-6 md:py-8">
+      <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">Teams</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {teams.map((team: any) => (
           <Link href={`/teams/${team.team_id}`} key={team.team_id}>
             <Card className="h-full transition-all hover:shadow-lg">
               <CardHeader>
                 <div className="flex justify-between items-center">
-                  <CardTitle>{team.team_name}</CardTitle>
-                  <Users className="h-5 w-5 text-blue-500" />
+                  <CardTitle className="text-base md:text-lg">{team.team_name}</CardTitle>
+                  <Users className="h-4 w-4 md:h-5 md:w-5 text-blue-500" />
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Created</span>
-                  <span className="font-bold">{new Date(team.created_at).toLocaleDateString()}</span>
+                  <span className="text-xs md:text-sm text-muted-foreground">Created</span>
+                  <span className="text-xs md:text-sm font-bold">{new Date(team.created_at).toLocaleDateString()}</span>
                 </div>
               </CardContent>
             </Card>

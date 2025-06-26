@@ -26,6 +26,7 @@ interface Match {
 interface Standing {
   rank: number
   teamId: number
+  teamName: string
   losses: number
   wins: number
   lastMatchId: number
@@ -189,7 +190,7 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
                   <span className="font-semibold">Current Leader</span>
                 </div>
                 <p className="text-lg font-bold mt-2">
-                  {data?.standings[0] ? `Team ${data.standings[0].teamId}` : 'TBD'}
+                  {data?.standings[0] ? data.standings[0].teamName : 'TBD'}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {data?.standings[0] ? `${data.standings[0].wins}W - ${data.standings[0].losses}L` : ''}
@@ -214,7 +215,7 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
                           <Badge variant={standing.rank <= 3 ? "default" : "secondary"}>
                             #{standing.rank}
                           </Badge>
-                          <span className="font-medium">Team {standing.teamId}</span>
+                          <span className="font-medium">{standing.teamName}</span>
                         </div>
                         <div className="text-right">
                           <p className="text-sm font-semibold">{standing.wins}W - {standing.losses}L</p>
