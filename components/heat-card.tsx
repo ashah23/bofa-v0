@@ -1,10 +1,18 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { TeamTimer } from './team-timer'
+
+// Fixed colors for each team position
+const TEAM_COLORS = [
+    { name: 'Blue', value: '#3b82f6', bg: '#eff6ff', border: '#bfdbfe' },    // Team 1
+    { name: 'Green', value: '#10b981', bg: '#ecfdf5', border: '#a7f3d0' },   // Team 2
+    { name: 'Yellow', value: '#f59e0b', bg: '#fffbeb', border: '#fde68a' },  // Team 3
+    { name: 'Purple', value: '#8b5cf6', bg: '#faf5ff', border: '#c4b5fd' },  // Team 4
+]
 
 interface HeatCardProps {
     heat: {
@@ -30,6 +38,10 @@ export function HeatCard({ heat, onStartHeat, onCompleteHeat }: HeatCardProps) {
     const [isRunning, setIsRunning] = useState(false)
     const [startTime, setStartTime] = useState<number | null>(null)
     const [stoppedTeams, setStoppedTeams] = useState<Set<string>>(new Set())
+
+    const getTeamColor = (teamIndex: number) => {
+        return TEAM_COLORS[teamIndex] || TEAM_COLORS[0]
+    }
 
     const startAllTimers = () => {
         setIsRunning(true)
@@ -132,6 +144,7 @@ export function HeatCard({ heat, onStartHeat, onCompleteHeat }: HeatCardProps) {
                                         isRunning={isRunning && !stoppedTeams.has(heat.team1_name!)}
                                         startTime={startTime}
                                         onStop={() => { }}
+                                        teamColor={getTeamColor(0)}
                                     />
                                 )}
                                 {heat.team2_name && (
@@ -141,6 +154,7 @@ export function HeatCard({ heat, onStartHeat, onCompleteHeat }: HeatCardProps) {
                                         isRunning={isRunning && !stoppedTeams.has(heat.team2_name!)}
                                         startTime={startTime}
                                         onStop={() => { }}
+                                        teamColor={getTeamColor(1)}
                                     />
                                 )}
                                 {heat.team3_name && (
@@ -150,6 +164,7 @@ export function HeatCard({ heat, onStartHeat, onCompleteHeat }: HeatCardProps) {
                                         isRunning={isRunning && !stoppedTeams.has(heat.team3_name!)}
                                         startTime={startTime}
                                         onStop={() => { }}
+                                        teamColor={getTeamColor(2)}
                                     />
                                 )}
                                 {heat.team4_name && (
@@ -159,6 +174,7 @@ export function HeatCard({ heat, onStartHeat, onCompleteHeat }: HeatCardProps) {
                                         isRunning={isRunning && !stoppedTeams.has(heat.team4_name!)}
                                         startTime={startTime}
                                         onStop={() => { }}
+                                        teamColor={getTeamColor(3)}
                                     />
                                 )}
                             </div>
@@ -175,32 +191,64 @@ export function HeatCard({ heat, onStartHeat, onCompleteHeat }: HeatCardProps) {
                     {!showTimers && (
                         <div className="space-y-2">
                             {heat.team1_name && (
-                                <div className="flex justify-between items-center">
-                                    <span>{heat.team1_name}</span>
+                                <div className="flex justify-between items-center p-2 rounded-md" 
+                                     style={{ 
+                                         backgroundColor: getTeamColor(0).bg,
+                                         border: `1px solid ${getTeamColor(0).border}`
+                                     }}>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-4 h-4 rounded-full" 
+                                             style={{ backgroundColor: getTeamColor(0).value }}></div>
+                                        <span>{heat.team1_name}</span>
+                                    </div>
                                     <span className="text-muted-foreground">
                                         {heat.team1_time ? `${heat.team1_time}s` : 'Pending'}
                                     </span>
                                 </div>
                             )}
                             {heat.team2_name && (
-                                <div className="flex justify-between items-center">
-                                    <span>{heat.team2_name}</span>
+                                <div className="flex justify-between items-center p-2 rounded-md" 
+                                     style={{ 
+                                         backgroundColor: getTeamColor(1).bg,
+                                         border: `1px solid ${getTeamColor(1).border}`
+                                     }}>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-4 h-4 rounded-full" 
+                                             style={{ backgroundColor: getTeamColor(1).value }}></div>
+                                        <span>{heat.team2_name}</span>
+                                    </div>
                                     <span className="text-muted-foreground">
                                         {heat.team2_time ? `${heat.team2_time}s` : 'Pending'}
                                     </span>
                                 </div>
                             )}
                             {heat.team3_name && (
-                                <div className="flex justify-between items-center">
-                                    <span>{heat.team3_name}</span>
+                                <div className="flex justify-between items-center p-2 rounded-md" 
+                                     style={{ 
+                                         backgroundColor: getTeamColor(2).bg,
+                                         border: `1px solid ${getTeamColor(2).border}`
+                                     }}>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-4 h-4 rounded-full" 
+                                             style={{ backgroundColor: getTeamColor(2).value }}></div>
+                                        <span>{heat.team3_name}</span>
+                                    </div>
                                     <span className="text-muted-foreground">
                                         {heat.team3_time ? `${heat.team3_time}s` : 'Pending'}
                                     </span>
                                 </div>
                             )}
                             {heat.team4_name && (
-                                <div className="flex justify-between items-center">
-                                    <span>{heat.team4_name}</span>
+                                <div className="flex justify-between items-center p-2 rounded-md" 
+                                     style={{ 
+                                         backgroundColor: getTeamColor(3).bg,
+                                         border: `1px solid ${getTeamColor(3).border}`
+                                     }}>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-4 h-4 rounded-full" 
+                                             style={{ backgroundColor: getTeamColor(3).value }}></div>
+                                        <span>{heat.team4_name}</span>
+                                    </div>
                                     <span className="text-muted-foreground">
                                         {heat.team4_time ? `${heat.team4_time}s` : 'Pending'}
                                     </span>

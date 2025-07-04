@@ -223,3 +223,104 @@ export async function POST(
     client.release();
   }
 }
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ eventId: string }> }
+) {
+  const { eventId } = await params;
+
+  const client = await pool.connect();
+  try {
+    const body = await request.json();
+    const { matchId } = body;
+
+    if (!matchId) {
+      return NextResponse.json(
+        { success: false, error: 'Missing required field: matchId' },
+        { status: 400 }
+      );
+    }
+
+    await client.query('BEGIN');
+
+    // Get the match info and its next matches
+    const matchRes = await client.query(
+      `SELECT 
+        winner_id, 
+        loser_id, 
+        next_match_win_id, 
+        next_match_win_slot, 
+        next_match_lose_id, 
+        next_match_lose_slot 
+       FROM double_elim_matches 
+       WHERE match_id = $1 AND event_id = $2`,
+      [matchId, eventId]
+    );
+    
+    if (matchRes.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return NextResponse.json(
+        { success: false, error: 'Match not found' },
+        { status: 404 }
+      );
+    }
+    
+    const match = matchRes.rows[0];
+    
+    if (!match.winner_id || !match.loser_id) {
+      await client.query('ROLLBACK');
+      return NextResponse.json(
+        { success: false, error: 'Match has not been played yet' },
+        { status: 400 }
+      );
+    }
+
+    // Reset the match
+    await client.query(
+      `UPDATE double_elim_matches 
+       SET winner_id = NULL, loser_id = NULL, played_at = NULL
+       WHERE match_id = $1 AND event_id = $2`,
+      [matchId, eventId]
+    );
+
+    // Reset the next match for the winner
+    if (match.next_match_win_id && match.next_match_win_slot) {
+      const slotCol = match.next_match_win_slot === 1 ? 'team1_id' : 'team2_id';
+      await client.query(
+        `UPDATE double_elim_matches SET ${slotCol} = NULL WHERE match_id = $1 AND event_id = $2`,
+        [match.next_match_win_id, eventId]
+      );
+    }
+
+    // Reset the next match for the loser
+    if (match.next_match_lose_id && match.next_match_lose_slot) {
+      const slotCol = match.next_match_lose_slot === 1 ? 'team1_id' : 'team2_id';
+      await client.query(
+        `UPDATE double_elim_matches SET ${slotCol} = NULL WHERE match_id = $1 AND event_id = $2`,
+        [match.next_match_lose_id, eventId]
+      );
+    }
+
+    await client.query('COMMIT');
+
+    return NextResponse.json({
+      success: true,
+      message: 'Match reset successfully'
+    });
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error("Error resetting double elimination match:", err);
+    return NextResponse.json(
+      { 
+        success: false,
+        error: 'Failed to reset match',
+        details: err instanceof Error ? err.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
+  } finally {
+    client.release();
+  }
+}

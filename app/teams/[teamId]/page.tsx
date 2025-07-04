@@ -33,10 +33,9 @@ export default async function TeamPage({ params }: { params: Promise<{ teamId: s
       <Card className="mb-8">
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle className="text-3xl">{team.team_name}</CardTitle>
+            <CardTitle className="text-2xl">{team.team_name}</CardTitle>
             <div className="flex items-center">
-              <Medal className="h-5 w-5 text-yellow-500 mr-2" />
-              <span className="font-bold">{team.total_points || 0} Points</span>
+              <span className="font-bold text-lg">{team.total_points || 0} Points</span>
             </div>
           </div>
           <CardDescription>Team Members</CardDescription>
@@ -49,30 +48,28 @@ export default async function TeamPage({ params }: { params: Promise<{ teamId: s
       <Card>
         <CardHeader>
           <CardTitle>Points History</CardTitle>
-          <CardDescription>Detailed breakdown of points earned by the team</CardDescription>
+          <CardDescription>Breakdown of points earned by the team</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-3 px-4">Event</th>
-                  <th className="text-left py-3 px-4">Type</th>
-                  <th className="text-left py-3 px-4">Comments</th>
-                  <th className="text-right py-3 px-4">Points</th>
-                  <th className="text-right py-3 px-4">When</th>
+                  <th className="text-left py-3 px-4 text-sm">Type</th>
+                  <th className="text-right py-3 px-4 text-sm">Points</th>
+                  <th className="text-left py-3 px-4 text-sm">Comments</th>
+                  <th className="text-right py-3 px-4 text-sm">When</th>
                 </tr>
               </thead>
               <tbody>
                 {team.points_history.map((point: any, index: number) => (
                   <tr key={index} className="border-b hover:bg-muted/50">
-                    <td className="py-3 px-4 font-medium">{point.event_name}</td>
-                    <td className="py-3 px-4">{point.point_type}</td>
-                    <td className="py-3 px-4">{point.comments}</td>
-                    <td className="py-3 px-4 text-right font-bold">
+                    <td className="py-3 px-4 text-sm">{point.point_type == 'EVENT' ? point.event_name : point.point_type}</td>
+                    <td className="py-3 px-4 text-right font-bold text-sm">
                       {point.point_value > 0 ? `+${point.point_value}` : point.point_value}
                     </td>
-                    <td className="py-3 px-4 text-right text-muted-foreground">
+                    <td className="py-3 px-4 text-sm">{point.comments}</td>
+                    <td className="py-3 px-4 text-right text-muted-foreground text-sm">
                       {formatDistanceToNow(new Date(point.updated_at), { addSuffix: true })}
                     </td>
                   </tr>

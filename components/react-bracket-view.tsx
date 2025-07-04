@@ -1,10 +1,21 @@
 "use client"
 
-import { Bracket, IRoundProps, Seed, SingleLineSeed, SeedItem, SeedTeam, IRenderSeedProps } from 'react-brackets'
+import { useState } from "react"
+import { Bracket, IRoundProps, IRenderSeedProps, Seed, SeedItem, SeedTeam, SingleLineSeed } from "react-brackets"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { CheckCircle, Clock, XCircle, Play } from "lucide-react"
-import { useState } from "react"
+import { Play, RotateCcw } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 interface Match {
   match_id: number
@@ -32,6 +43,7 @@ interface BracketData {
     loser: Match[]
     final: Match[]
   }
+  standings?: any[]
   eventId: number
 }
 
@@ -39,21 +51,13 @@ interface ReactBracketViewProps {
   data: BracketData
   eventId: string
   onUpdateMatch: (matchId: number, winnerId: number, loserId: number) => Promise<void>
+  readOnly?: boolean
 }
 
-export function ReactBracketView({ data, eventId, onUpdateMatch }: ReactBracketViewProps) {
-  const [updatingMatch, setUpdatingMatch] = useState(false)
+export function ReactBracketView({ data, eventId, onUpdateMatch, readOnly = false }: ReactBracketViewProps) {
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
-
-  const getMatchStatus = (match: Match) => {
-    if (match.winner_id) {
-      return { status: 'completed', icon: <CheckCircle className="h-4 w-4 text-green-500" /> }
-    }
-    if (match.team1_id && match.team2_id) {
-      return { status: 'ready', icon: <Clock className="h-4 w-4 text-yellow-500" /> }
-    }
-    return { status: 'pending', icon: <XCircle className="h-4 w-4 text-gray-400" /> }
-  }
+  const [updatingMatch, setUpdatingMatch] = useState(false)
+  const [resettingMatch, setResettingMatch] = useState<number | null>(null)
 
   const updateMatchResult = async (matchId: number, winnerId: number, loserId: number) => {
     try {
@@ -65,6 +69,43 @@ export function ReactBracketView({ data, eventId, onUpdateMatch }: ReactBracketV
     } finally {
       setUpdatingMatch(false)
     }
+  }
+
+  const resetMatch = async (matchId: number) => {
+    try {
+      setResettingMatch(matchId)
+      const response = await fetch(`/api/events/${eventId}/double-elimination-matches`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ matchId })
+      })
+
+      const result = await response.json()
+      
+      if (result.success) {
+        // Refresh the data by calling the parent's refresh function
+        window.location.reload()
+      } else {
+        alert('Failed to reset match: ' + result.error)
+      }
+    } catch (err) {
+      alert('Failed to reset match')
+      console.error('Error resetting match:', err)
+    } finally {
+      setResettingMatch(null)
+    }
+  }
+
+  const getMatchStatus = (match: Match) => {
+    if (match.winner_id) {
+      return { status: 'completed', icon: '✅', color: 'text-green-600', bgColor: 'bg-green-50' }
+    }
+    if (match.team1_id && match.team2_id) {
+      return { status: 'ready', icon: '⏰', color: 'text-yellow-600', bgColor: 'bg-yellow-50' }
+    }
+    return { status: 'pending', icon: '⏳', color: 'text-gray-400', bgColor: 'bg-gray-50' }
   }
 
   // Transform matches into the format expected by react-brackets
@@ -119,75 +160,115 @@ export function ReactBracketView({ data, eventId, onUpdateMatch }: ReactBracketV
 
     return (
       <Seed mobileBreakpoint={breakpoint} style={{ fontSize: 12 }}>
-        <SeedItem>
+        <SeedItem className={`${status.bgColor} border border-gray-200 rounded-lg p-3 shadow-sm`}>
           <div className="w-full">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-gray-500">Match {match.match_number}</span>
-              {status.icon}
+              <span className="text-xs text-gray-500 font-medium">Match {match.match_number}</span>
+              <span className={status.color}>{status.icon}</span>
             </div>
-            <div className="space-y-1">
+            
+            <div className="space-y-2">
               <SeedTeam 
-                style={{ 
-                  color: seed.teams[0]?.isWinner ? '#16a34a' : '#374151',
-                  backgroundColor: seed.teams[0]?.isWinner ? '#f0fdf4' : 'transparent',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  fontWeight: seed.teams[0]?.isWinner ? 'bold' : 'normal'
-                }}
+                className={`px-3 py-2 rounded-md border transition-colors ${
+                  seed.teams[0]?.isWinner 
+                    ? 'bg-green-100 border-green-300 text-green-800 font-semibold' 
+                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                }`}
               >
                 {seed.teams[0]?.name || 'TBD'}
               </SeedTeam>
               <SeedTeam 
-                style={{ 
-                  color: seed.teams[1]?.isWinner ? '#16a34a' : '#374151',
-                  backgroundColor: seed.teams[1]?.isWinner ? '#f0fdf4' : 'transparent',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  fontWeight: seed.teams[1]?.isWinner ? 'bold' : 'normal'
-                }}
+                className={`px-3 py-2 rounded-md border transition-colors ${
+                  seed.teams[1]?.isWinner 
+                    ? 'bg-green-100 border-green-300 text-green-800 font-semibold' 
+                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                }`}
               >
                 {seed.teams[1]?.name || 'TBD'}
               </SeedTeam>
             </div>
-            {isPlayable && (
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button 
-                    size="sm" 
-                    className="w-full mt-2 text-xs"
-                    onClick={() => setSelectedMatch(match)}
-                  >
-                    <Play className="h-3 w-3 mr-1" />
-                    Record Result
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Record Match Result</DialogTitle>
-                    <DialogDescription>
-                      Select the winner of this match
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <Button
-                        variant="outline"
-                        onClick={() => updateMatchResult(match.match_id, match.team1_id!, match.team2_id!)}
-                        disabled={updatingMatch}
+            
+            {!readOnly && (
+              <div className="flex gap-1 mt-3">
+                {isPlayable && (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button 
+                        size="sm" 
+                        className="flex-1 text-xs"
+                        onClick={() => setSelectedMatch(match)}
                       >
-                        {seed.teams[0]?.name || 'TBD'} Wins
+                        <Play className="h-3 w-3 mr-1" />
+                        Record Result
                       </Button>
-                      <Button
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Record Match Result</DialogTitle>
+                        <DialogDescription>
+                          Select the winner of this match
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <Button
+                            variant="outline"
+                            onClick={() => updateMatchResult(match.match_id, match.team1_id!, match.team2_id!)}
+                            disabled={updatingMatch}
+                          >
+                            {seed.teams[0]?.name || 'TBD'} Wins
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => updateMatchResult(match.match_id, match.team2_id!, match.team1_id!)}
+                            disabled={updatingMatch}
+                          >
+                            {seed.teams[1]?.name || 'TBD'} Wins
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
+                
+                {match.winner_id && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        size="sm" 
                         variant="outline"
-                        onClick={() => updateMatchResult(match.match_id, match.team2_id!, match.team1_id!)}
-                        disabled={updatingMatch}
+                        className="text-xs"
+                        disabled={resettingMatch === match.match_id}
                       >
-                        {seed.teams[1]?.name || 'TBD'} Wins
+                        <RotateCcw className="h-3 w-3 mr-1" />
+                        {resettingMatch === match.match_id ? '...' : 'Reset'}
                       </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Reset Match</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to reset this match? This will:
+                          <ul className="list-disc list-inside mt-2">
+                            <li>Clear the winner and loser</li>
+                            <li>Remove teams from the next matches</li>
+                            <li>Allow the match to be replayed</li>
+                          </ul>
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => resetMatch(match.match_id)}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          Reset Match
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+              </div>
             )}
           </div>
         </SeedItem>
@@ -209,75 +290,115 @@ export function ReactBracketView({ data, eventId, onUpdateMatch }: ReactBracketV
 
     return (
       <Wrapper mobileBreakpoint={breakpoint} style={{ fontSize: 12 }}>
-        <SeedItem>
+        <SeedItem className={`${status.bgColor} border border-gray-200 rounded-lg p-3 shadow-sm`}>
           <div className="w-full">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-gray-500">Match {match.match_number}</span>
-              {status.icon}
+              <span className="text-xs text-gray-500 font-medium">Match {match.match_number}</span>
+              <span className={status.color}>{status.icon}</span>
             </div>
-            <div className="space-y-1">
+            
+            <div className="space-y-2">
               <SeedTeam 
-                style={{ 
-                  color: seed.teams[0]?.isWinner ? '#16a34a' : '#374151',
-                  backgroundColor: seed.teams[0]?.isWinner ? '#f0fdf4' : 'transparent',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  fontWeight: seed.teams[0]?.isWinner ? 'bold' : 'normal'
-                }}
+                className={`px-3 py-2 rounded-md border transition-colors ${
+                  seed.teams[0]?.isWinner 
+                    ? 'bg-green-100 border-green-300 text-green-800 font-semibold' 
+                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                }`}
               >
                 {seed.teams[0]?.name || 'TBD'}
               </SeedTeam>
               <SeedTeam 
-                style={{ 
-                  color: seed.teams[1]?.isWinner ? '#16a34a' : '#374151',
-                  backgroundColor: seed.teams[1]?.isWinner ? '#f0fdf4' : 'transparent',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  fontWeight: seed.teams[1]?.isWinner ? 'bold' : 'normal'
-                }}
+                className={`px-3 py-2 rounded-md border transition-colors ${
+                  seed.teams[1]?.isWinner 
+                    ? 'bg-green-100 border-green-300 text-green-800 font-semibold' 
+                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                }`}
               >
                 {seed.teams[1]?.name || 'TBD'}
               </SeedTeam>
             </div>
-            {isPlayable && (
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button 
-                    size="sm" 
-                    className="w-full mt-2 text-xs"
-                    onClick={() => setSelectedMatch(match)}
-                  >
-                    <Play className="h-3 w-3 mr-1" />
-                    Record Result
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Record Match Result</DialogTitle>
-                    <DialogDescription>
-                      Select the winner of this match
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <Button
-                        variant="outline"
-                        onClick={() => updateMatchResult(match.match_id, match.team1_id!, match.team2_id!)}
-                        disabled={updatingMatch}
+            
+            {!readOnly && (
+              <div className="flex gap-1 mt-3">
+                {isPlayable && (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button 
+                        size="sm" 
+                        className="flex-1 text-xs"
+                        onClick={() => setSelectedMatch(match)}
                       >
-                        {seed.teams[0]?.name || 'TBD'} Wins
+                        <Play className="h-3 w-3 mr-1" />
+                        Record Result
                       </Button>
-                      <Button
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Record Match Result</DialogTitle>
+                        <DialogDescription>
+                          Select the winner of this match
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <Button
+                            variant="outline"
+                            onClick={() => updateMatchResult(match.match_id, match.team1_id!, match.team2_id!)}
+                            disabled={updatingMatch}
+                          >
+                            {seed.teams[0]?.name || 'TBD'} Wins
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => updateMatchResult(match.match_id, match.team2_id!, match.team1_id!)}
+                            disabled={updatingMatch}
+                          >
+                            {seed.teams[1]?.name || 'TBD'} Wins
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
+                
+                {match.winner_id && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        size="sm" 
                         variant="outline"
-                        onClick={() => updateMatchResult(match.match_id, match.team2_id!, match.team1_id!)}
-                        disabled={updatingMatch}
+                        className="text-xs"
+                        disabled={resettingMatch === match.match_id}
                       >
-                        {seed.teams[1]?.name || 'TBD'} Wins
+                        <RotateCcw className="h-3 w-3 mr-1" />
+                        {resettingMatch === match.match_id ? '...' : 'Reset'}
                       </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Reset Match</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to reset this match? This will:
+                          <ul className="list-disc list-inside mt-2">
+                            <li>Clear the winner and loser</li>
+                            <li>Remove teams from the next matches</li>
+                            <li>Allow the match to be replayed</li>
+                          </ul>
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => resetMatch(match.match_id)}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          Reset Match
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+              </div>
             )}
           </div>
         </SeedItem>
@@ -290,51 +411,33 @@ export function ReactBracketView({ data, eventId, onUpdateMatch }: ReactBracketV
   const finalRounds = transformMatchesToRounds(data.matches.final, 'Final')
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 bg-white p-6 rounded-lg">
       {/* Winner's Bracket */}
       {winnerRounds.length > 0 && (
-        <div className="bracket-container">
-          <h2 className="text-2xl font-semibold mb-4 p-4 border-b">Winner's Bracket</h2>
-          <div className="overflow-x-auto p-4">
-            <Bracket 
-              rounds={winnerRounds} 
-              renderSeedComponent={WinnerBracketSeed}
-              mobileBreakpoint={768}
-              bracketClassName="bracket-container"
-              roundClassName="bracket-round"
-            />
+        <div>
+          <h2 className="text-2xl font-bold mb-6 text-gray-800 border-b border-gray-200 pb-2">Winner's Bracket</h2>
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <Bracket rounds={winnerRounds} renderSeedComponent={WinnerBracketSeed} />
           </div>
         </div>
       )}
 
       {/* Loser's Bracket */}
       {loserRounds.length > 0 && (
-        <div className="bracket-container">
-          <h2 className="text-2xl font-semibold mb-4 p-4 border-b">Loser's Bracket</h2>
-          <div className="overflow-x-auto p-4">
-            <Bracket 
-              rounds={loserRounds} 
-              renderSeedComponent={LoserBracketSeed}
-              mobileBreakpoint={768}
-              bracketClassName="bracket-container"
-              roundClassName="bracket-round"
-            />
+        <div>
+          <h2 className="text-2xl font-bold mb-6 text-gray-800 border-b border-gray-200 pb-2">Loser's Bracket</h2>
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <Bracket rounds={loserRounds} renderSeedComponent={LoserBracketSeed} />
           </div>
         </div>
       )}
 
       {/* Finals */}
       {finalRounds.length > 0 && (
-        <div className="bracket-container">
-          <h2 className="text-2xl font-semibold mb-4 p-4 border-b">Finals</h2>
-          <div className="overflow-x-auto p-4">
-            <Bracket 
-              rounds={finalRounds} 
-              renderSeedComponent={WinnerBracketSeed}
-              mobileBreakpoint={768}
-              bracketClassName="bracket-container"
-              roundClassName="bracket-round"
-            />
+        <div>
+          <h2 className="text-2xl font-bold mb-6 text-gray-800 border-b border-gray-200 pb-2">Finals</h2>
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <Bracket rounds={finalRounds} renderSeedComponent={WinnerBracketSeed} />
           </div>
         </div>
       )}

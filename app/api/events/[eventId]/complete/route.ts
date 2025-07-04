@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import pool from '@/lib/db'
 
+const point_values = [15, 12, 10, 8, 7, 6, 5, 4, 3, 2, 1, 0]
 export const dynamic = 'force-dynamic'
 
 export async function POST(
@@ -67,7 +68,7 @@ export async function POST(
             SELECT 
                 team_id,
                 time,
-                ROUND((total_teams * 10) - ((rank - 1) * 10))::INTEGER as point_value
+                rank
             FROM ranked_teams
             ORDER BY time ASC
         `, [eventId])
@@ -84,7 +85,7 @@ export async function POST(
 
         // Store the standings
         for (const standing of standingsResult.rows) {
-            console.log('Storing points for team:', standing.team_id, 'points:', standing.point_value)
+            console.log('Storing points for team:', standing.team_id, 'points:', point_values[standing.rank - 1])
             await pool.query(`
                 INSERT INTO points (
                     event_id,
@@ -96,7 +97,7 @@ export async function POST(
             `, [
                 eventId,
                 standing.team_id,
-                standing.point_value
+                point_values[standing.rank - 1]
             ])
         }
 

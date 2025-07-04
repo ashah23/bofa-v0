@@ -25,7 +25,6 @@ export function TeamPlayers({ players }: TeamPlayersProps) {
             <ul className="space-y-2">
                 {players?.map((player) => (
                     <li key={player.player_id} className="flex items-center p-2 rounded-md hover:bg-muted">
-                        <User className="h-5 w-5 mr-3 text-muted-foreground" />
                         <div>
                             <button
                                 onClick={() => setSelectedPlayer(player)}
@@ -33,7 +32,6 @@ export function TeamPlayers({ players }: TeamPlayersProps) {
                             >
                                 {player.player_name}
                             </button>
-                            <div className="text-sm text-muted-foreground">{player.email}</div>
                         </div>
                     </li>
                 ))}
