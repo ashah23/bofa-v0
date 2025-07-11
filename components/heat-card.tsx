@@ -8,10 +8,10 @@ import { TeamTimer } from './team-timer'
 
 // Fixed colors for each team position
 const TEAM_COLORS = [
-    { name: 'Blue', value: '#3b82f6', bg: '#eff6ff', border: '#bfdbfe' },    // Team 1
+    { name: 'Blue', value: '#60a5fa', bg: '#f0f9ff', border: '#bae6fd' },    // Team 1 - lighter blue
     { name: 'Green', value: '#10b981', bg: '#ecfdf5', border: '#a7f3d0' },   // Team 2
-    { name: 'Yellow', value: '#f59e0b', bg: '#fffbeb', border: '#fde68a' },  // Team 3
-    { name: 'Purple', value: '#8b5cf6', bg: '#faf5ff', border: '#c4b5fd' },  // Team 4
+    { name: 'Red', value: '#ef4444', bg: '#fde6e7', border: '#fca5a5' },  // Team 3
+    { name: 'Purple', value: '#7c3aed', bg: '#f3f4f6', border: '#a78bfa' },  // Team 4 - darker purple
 ]
 
 interface HeatCardProps {

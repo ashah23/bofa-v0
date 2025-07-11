@@ -48,6 +48,9 @@ export default function ClientLayout({
                 <Link href="/teams" className="text-xs md:text-sm font-medium hover:underline">
                   Teams
                 </Link>
+                <Link href="/extra-points" className="text-xs md:text-sm font-medium hover:underline">
+                  Extra Points
+                </Link>
                 <UserNav user={user} onLogin={handleLogin} />
               </div>
             </nav>

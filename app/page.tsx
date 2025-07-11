@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Beer, Medal, Users } from "lucide-react"
+import { Beer, ChartBar, Medal, Users} from "lucide-react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function Home() {
@@ -48,6 +48,21 @@ export default function Home() {
             </CardContent>
             <CardFooter>
               <p className="text-xs md:text-sm text-muted-foreground">Meet the competitors</p>
+            </CardFooter>
+          </Card>
+        </Link>
+
+        <Link href="/extra-points" className="block">
+          <Card className="h-full transition-all hover:shadow-lg">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-lg md:text-2xl font-bold">Extra Points</CardTitle>
+              <ChartBar className="h-6 w-6 md:h-8 md:w-8 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <CardDescription className="text-sm md:text-base">Bonus and Penalty Points</CardDescription>
+            </CardContent>
+            <CardFooter>
+              <p className="text-xs md:text-sm text-muted-foreground">Manage Bonus and Penalty Points</p>
             </CardFooter>
           </Card>
         </Link>
