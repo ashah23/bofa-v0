@@ -100,7 +100,7 @@ export default function ExtraPointsPage() {
         },
         body: JSON.stringify({
           team_id: parseInt(formData.team_id),
-          point_value: parseInt(formData.point_value),
+          point_value: formData.category === 'PENALTY' ? -Math.abs(parseInt(formData.point_value)) : Math.abs(parseInt(formData.point_value)),
           category: formData.category,
           comments: formData.comments || null
         })
@@ -296,21 +296,17 @@ export default function ExtraPointsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="points">Points *</Label>
-                  <Input
-                    id="points"
-                    type="number"
-                    placeholder="Enter points (positive or negative)"
-                    value={formData.point_value}
-                    onChange={(e) => setFormData(prev => ({ ...prev, point_value: e.target.value }))}
-                  />
-                </div>
-
-                <div className="space-y-2">
                   <Label htmlFor="category">Category *</Label>
                   <Select 
                     value={formData.category} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+                    onValueChange={(value) => {
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        category: value,
+                        // Reset point value when category changes
+                        point_value: ''
+                      }))
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
@@ -320,6 +316,17 @@ export default function ExtraPointsPage() {
                       <SelectItem value="PENALTY">Penalty</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="points">Points *</Label>
+                  <Input
+                    id="points"
+                    type="number"
+                    placeholder={formData.category === 'PENALTY' ? "Enter penalty points (will be made negative)" : "Enter bonus points"}
+                    value={formData.point_value}
+                    onChange={(e) => setFormData(prev => ({ ...prev, point_value: e.target.value }))}
+                  />
                 </div>
 
                 <div className="space-y-2">
