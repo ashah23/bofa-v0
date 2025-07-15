@@ -62,28 +62,7 @@ export async function completeHeat(heatId: string, times: { [key: string]: numbe
     }
 }
 
-export async function completeHeatEvent(eventId: string) {
-    try {
-        console.log('Completing heat event:', eventId)
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events/${eventId}/complete`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        })
 
-        if (!response.ok) {
-            const errorData = await response.json()
-            console.error('Failed to complete heat event:', errorData)
-            throw new Error(errorData.error || 'Failed to complete heat event')
-        }
-
-        revalidatePath('/events/[eventId]', 'page')
-    } catch (error) {
-        console.error('Error in completeHeatEvent:', error)
-        throw error
-    }
-}
 
 export async function resetHeatEvent(eventId: string) {
     try {

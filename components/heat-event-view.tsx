@@ -1,8 +1,12 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Award, Medal } from "lucide-react"
 import { HeatCard } from "@/components/heat-card"
-import { startHeat, completeHeat, completeHeatEvent, resetHeatEvent } from "@/app/events/[eventId]/heat_actions"
+import { startHeat, completeHeat, resetHeatEvent } from "@/app/events/[eventId]/heat_actions"
+import { StandingsReviewModal } from "@/components/standings-review-modal"
+import { useState } from "react"
 
 interface HeatEventViewProps {
   event: any
@@ -13,9 +17,11 @@ interface HeatEventViewProps {
 
 export function HeatEventView({ event, heatMatches, standings, eventId }: HeatEventViewProps) {
   const allHeatsCompleted = heatMatches?.every((match: any) => match.heat_status === 'COMPLETED')
+  const [showStandingsModal, setShowStandingsModal] = useState(false)
 
   return (
-    <Card className="mb-8">
+    <>
+      <Card className="mb-8">
       <CardHeader>
         <div className="flex justify-between items-center">
           <div>
@@ -24,28 +30,26 @@ export function HeatEventView({ event, heatMatches, standings, eventId }: HeatEv
           </div>
           <div className="flex gap-4">
             {allHeatsCompleted && event.event_status !== 'COMPLETED' && (
-              <form action={async (formData: FormData) => {
-                'use server'
-                const eventId = formData.get('eventId') as string
-                await completeHeatEvent(eventId)
-              }}>
-                <input type="hidden" name="eventId" value={eventId} />
-                <Button type="submit" variant="default">
-                  Complete Event & Calculate Standings
-                </Button>
-              </form>
+              <Button 
+                onClick={() => setShowStandingsModal(true)} 
+                variant="default"
+              >
+                Complete Event & Calculate Standings
+              </Button>
             )}
             {event.event_status === 'COMPLETED' && (
-              <form action={async (formData: FormData) => {
-                'use server'
-                const eventId = formData.get('eventId') as string
-                await resetHeatEvent(eventId)
-              }}>
-                <input type="hidden" name="eventId" value={eventId} />
-                <Button type="submit" variant="destructive">
-                  Reset Event
-                </Button>
-              </form>
+              <Button 
+                onClick={async () => {
+                  try {
+                    await resetHeatEvent(eventId)
+                  } catch (error) {
+                    console.error('Error resetting event:', error)
+                  }
+                }} 
+                variant="destructive"
+              >
+                Reset Event
+              </Button>
             )}
           </div>
         </div>
@@ -110,9 +114,17 @@ export function HeatEventView({ event, heatMatches, standings, eventId }: HeatEv
                     </thead>
                     <tbody>
                       {standings.slice(3).map((standing: any) => (
-                        <tr key={standing.team_name} className="border-b transition-colors hover:bg-muted/50">
-                          <td className="p-4 align-middle">{standing.rank}</td>
-                          <td className="p-4 align-middle font-medium">{standing.team_name}</td>
+                        <tr key={standing.team_name} className={`border-b transition-colors hover:bg-muted/50 ${standing.disqualified ? 'bg-red-50' : ''}`}>
+                          <td className="p-4 align-middle">
+                            {standing.disqualified ? (
+                              <span className="text-red-600 font-bold">DQ</span>
+                            ) : (
+                              standing.rank
+                            )}
+                          </td>
+                          <td className={`p-4 align-middle font-medium ${standing.disqualified ? 'text-red-600 line-through' : ''}`}>
+                            {standing.team_name}
+                          </td>
                           <td className="p-4 align-middle text-right">{standing.point_value}</td>
                         </tr>
                       ))}
@@ -143,5 +155,17 @@ export function HeatEventView({ event, heatMatches, standings, eventId }: HeatEv
         </div>
       </CardContent>
     </Card>
+
+      <StandingsReviewModal
+        isOpen={showStandingsModal}
+        onClose={() => setShowStandingsModal(false)}
+        eventId={eventId}
+        onComplete={() => {
+          setShowStandingsModal(false)
+          // Refresh the page to show updated standings
+          window.location.reload()
+        }}
+      />
+    </>
   )
 } 

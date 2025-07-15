@@ -31,16 +31,23 @@ export async function GET(
             )
         }
 
-        // Get standings with team names and points
+        // Get standings with team names, points, and disqualification status
         const standingsResult = await pool.query(`
             SELECT 
                 t.team_name,
                 p.point_value,
-                ROW_NUMBER() OVER (ORDER BY p.point_value DESC) as rank
+                es.disqualified,
+                CASE 
+                    WHEN es.disqualified = true THEN 12
+                    ELSE ROW_NUMBER() OVER (ORDER BY p.point_value DESC)
+                END as rank
             FROM points p
             JOIN teams t ON p.team_id = t.team_id
+            LEFT JOIN event_standings es ON p.event_id = es.event_id AND p.team_id = es.team_id
             WHERE p.event_id = $1 AND p.point_type = 'EVENT'
-            ORDER BY p.point_value DESC
+            ORDER BY 
+                CASE WHEN es.disqualified = true THEN 1 ELSE 0 END,
+                p.point_value DESC
         `, [eventId])
 
         return NextResponse.json({

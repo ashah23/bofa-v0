@@ -4,11 +4,13 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { Trophy, Medal, Award, Edit3, Save, X, Users } from 'lucide-react'
+import { Trophy, Medal, Award, Edit3, Users, CheckCircle, RotateCcw } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { EditScoreModal } from '@/components/edit-score-modal'
+import { IndividualStandingsReviewModal } from '@/components/individual-standings-review-modal'
 
 interface Player {
   player_id: number
@@ -45,13 +47,11 @@ interface IndividualEventViewProps {
 export function IndividualEventView({ event, eventId }: IndividualEventViewProps) {
   const [players, setPlayers] = useState<Player[]>([])
   const [teamStandings, setTeamStandings] = useState<TeamStanding[]>([])
-  const [editingPlayer, setEditingPlayer] = useState<number | null>(null)
-  const [editScores, setEditScores] = useState<{ twos: number; fives: number; tens: number }>({
-    twos: 0,
-    fives: 0,
-    tens: 0
-  })
+  const [selectedTeam, setSelectedTeam] = useState<string>('all')
+  const [editingPlayer, setEditingPlayer] = useState<Player | null>(null)
+  const [showStandingsModal, setShowStandingsModal] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [lastTap, setLastTap] = useState<{ playerId: number; time: number } | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -98,52 +98,71 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
   }
 
   const handleEdit = (player: Player) => {
-    setEditingPlayer(player.player_id)
-    setEditScores({
-      twos: player.twos,
-      fives: player.fives,
-      tens: player.tens
-    })
+    setEditingPlayer(player)
   }
 
-  const handleSave = async (playerId: number) => {
+  const handleSave = () => {
+    fetchScores()
+  }
+
+  const handleReset = async () => {
+    if (!confirm('Are you sure you want to reset this event? This will remove all standings and points data and set the event back to in progress.')) {
+      return
+    }
+
     try {
-      const response = await fetch(`/api/events/${eventId}/individual-scores`, {
+      const response = await fetch(`/api/events/${eventId}/individual-reset`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          playerId,
-          twos: editScores.twos,
-          fives: editScores.fives,
-          tens: editScores.tens
-        })
+        }
       })
 
       if (!response.ok) {
-        throw new Error('Failed to update score')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to reset event')
       }
 
-      await fetchScores()
-      setEditingPlayer(null)
       toast({
         title: 'Success',
-        description: 'Score updated successfully'
+        description: 'Event reset successfully. The event is now back to in progress.',
       })
+
+      // Refresh the page to show updated state
+      window.location.reload()
     } catch (error) {
-      console.error('Error updating score:', error)
+      console.error('Error resetting event:', error)
       toast({
         title: 'Error',
-        description: 'Failed to update score',
+        description: error instanceof Error ? error.message : 'Failed to reset event',
         variant: 'destructive'
       })
     }
   }
 
-  const handleCancel = () => {
-    setEditingPlayer(null)
+  const handleRowClick = (player: Player) => {
+    const now = Date.now()
+    const DOUBLE_TAP_DELAY = 300 // milliseconds
+
+    if (lastTap && 
+        lastTap.playerId === player.player_id && 
+        now - lastTap.time < DOUBLE_TAP_DELAY) {
+      // Double tap detected
+      setEditingPlayer(player)
+      setLastTap(null) // Reset for next double tap
+    } else {
+      // Single tap - just update the last tap
+      setLastTap({ playerId: player.player_id, time: now })
+    }
   }
+
+  // Get unique teams for filtering
+  const teams = Array.from(new Set(players.map(p => p.team_name).filter((name): name is string => Boolean(name))))
+
+  // Filter players by selected team
+  const filteredPlayers = selectedTeam === 'all' 
+    ? players 
+    : players.filter(player => player.team_name === selectedTeam)
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -186,45 +205,138 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
           <h1 className="text-3xl font-bold">{event.event_name}</h1>
           <p className="text-muted-foreground">Individual Event - Slam Dunk Challenge</p>
         </div>
-        <Badge variant={event.event_status === 'COMPLETED' ? 'default' : 'secondary'}>
-          {event.event_status}
-        </Badge>
+        <div className="flex items-center gap-4">
+          {event.event_status !== 'COMPLETED' && (
+            <Button 
+              onClick={() => setShowStandingsModal(true)} 
+              variant="default"
+              className="flex items-center gap-2"
+            >
+              <CheckCircle className="h-4 w-4" />
+              Complete Event & Calculate Standings
+            </Button>
+          )}
+          {event.event_status === 'COMPLETED' && (
+            <Button 
+              onClick={handleReset} 
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Reset Event
+            </Button>
+          )}
+          <Badge variant={event.event_status === 'COMPLETED' ? 'default' : 'secondary'}>
+            {event.event_status}
+          </Badge>
+        </div>
       </div>
 
       <Tabs defaultValue="team-standings" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="team-standings">Current Standings</TabsTrigger>
           <TabsTrigger value="top-performers">Top Performers</TabsTrigger>
-          <TabsTrigger value="scores">Score Table</TabsTrigger>
+          {event.event_status !== 'COMPLETED' && (
+            <TabsTrigger value="scores">Score Table</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="team-standings" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {teamStandings.map((team, index) => (
-              <div key={team.team_id} className="relative">
-                {/* Rank Badge positioned on top of card */}
-                <div className="absolute -top-2 -left-2 z-10">
-                  {getRankBadge(index + 1)}
-                </div>
-                
-                <Card className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="pt-2">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="font-semibold text-lg">{team.team_name}</div>
-                        <div className="text-xl font-bold text-primary">
-                          {team.total_points} pts
-                        </div>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {team.twos} twos • {team.fives} fives • {team.tens} tens
+          {event.event_status === 'COMPLETED' ? (
+            <div className="space-y-8">
+              {/* Olympic Podium */}
+              <div className="mb-8">
+                <div className="relative h-[200px] w-full max-w-4xl mx-auto">
+                  {/* Podium Base */}
+                  <div className="absolute bottom-0 left-0 right-0 h-[200px] bg-gray-100 rounded-t-2xl" />
+
+                  {/* Podium Steps */}
+                  <div className="absolute bottom-0 left-0 right-0 h-[200px] flex justify-center items-end gap-4 px-8">
+                    {/* 2nd Place */}
+                    <div className="w-1/3 h-[160px] bg-gray-200 rounded-t-xl flex flex-col items-center justify-center relative">
+                      <Award className="h-10 w-10 text-gray-400 mb-2" />
+                      <span className="font-bold text-gray-600">{teamStandings[1]?.team_name}</span>
+                      <span className="text-sm text-gray-500">{teamStandings[1]?.total_points} pts</span>
+                      <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-gray-200 px-4 py-1 rounded-full">
+                        <span className="font-bold text-gray-600">2nd</span>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+
+                    {/* 1st Place */}
+                    <div className="w-1/3 h-[200px] bg-yellow-100 rounded-t-xl flex flex-col items-center justify-center relative">
+                      <Trophy className="h-12 w-12 text-yellow-500 mb-2" />
+                      <span className="font-bold text-yellow-600">{teamStandings[0]?.team_name}</span>
+                      <span className="text-sm text-yellow-500">{teamStandings[0]?.total_points} pts</span>
+                      <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-yellow-100 px-4 py-1 rounded-full">
+                        <span className="font-bold text-yellow-600">1st</span>
+                      </div>
+                    </div>
+
+                    {/* 3rd Place */}
+                    <div className="w-1/3 h-[120px] bg-amber-100 rounded-t-xl flex flex-col items-center justify-center relative">
+                      <Award className="h-8 w-8 text-amber-700 mb-2" />
+                      <span className="font-bold text-amber-700">{teamStandings[2]?.team_name}</span>
+                      <span className="text-sm text-amber-600">{teamStandings[2]?.total_points} pts</span>
+                      <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-amber-100 px-4 py-1 rounded-full">
+                        <span className="font-bold text-amber-700">3rd</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            ))}
-          </div>
+
+              {/* Final Standings Table */}
+              {teamStandings.length > 3 && (
+                <div className="rounded-md border">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="h-12 px-4 text-left align-middle font-medium">Rank</th>
+                        <th className="h-12 px-4 text-left align-middle font-medium">Team</th>
+                        <th className="h-12 px-4 text-right align-middle font-medium">Points</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {teamStandings.slice(3).map((team, index) => (
+                        <tr key={team.team_id} className="border-b transition-colors hover:bg-muted/50">
+                          <td className="p-4 align-middle">{index + 4}</td>
+                          <td className="p-4 align-middle font-medium">{team.team_name}</td>
+                          <td className="p-4 align-middle text-right">{team.total_points}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {teamStandings.map((team, index) => (
+                <div key={team.team_id} className="relative">
+                  {/* Rank Badge positioned on top of card */}
+                  <div className="absolute -top-2 -left-2 z-10">
+                    {getRankBadge(index + 1)}
+                  </div>
+                  
+                  <Card className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="pt-2">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="font-semibold text-lg">{team.team_name}</div>
+                          <div className="text-xl font-bold text-primary">
+                            {team.total_points} pts
+                          </div>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {team.twos} twos • {team.fives} fives • {team.tens} tens
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="top-performers" className="space-y-4">
@@ -268,6 +380,22 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
               </CardTitle>
             </CardHeader>
             <CardContent>
+              <div className="mb-4">
+                <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Filter by team" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Teams</SelectItem>
+                    {teams.map((team) => (
+                      <SelectItem key={team} value={team}>
+                        {team}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -281,89 +409,27 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {players.map((player) => (
-                    <TableRow key={player.player_id}>
+                  {filteredPlayers.map((player) => (
+                    <TableRow 
+                      key={player.player_id}
+                      onClick={() => handleRowClick(player)}
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    >
                       <TableCell className="font-medium">{player.player_name}</TableCell>
                       <TableCell className="text-muted-foreground">{player.team_name || 'No Team'}</TableCell>
-                      <TableCell className="text-center">
-                        {editingPlayer === player.player_id ? (
-                          <Input
-                            type="number"
-                            min="0"
-                            value={editScores.twos}
-                            onChange={(e) =>
-                              setEditScores(prev => ({ ...prev, twos: parseInt(e.target.value) || 0 }))
-                            }
-                            className="w-20 text-center"
-                          />
-                        ) : (
-                          player.twos
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {editingPlayer === player.player_id ? (
-                          <Input
-                            type="number"
-                            min="0"
-                            value={editScores.fives}
-                            onChange={(e) =>
-                              setEditScores(prev => ({ ...prev, fives: parseInt(e.target.value) || 0 }))
-                            }
-                            className="w-20 text-center"
-                          />
-                        ) : (
-                          player.fives
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {editingPlayer === player.player_id ? (
-                          <Input
-                            type="number"
-                            min="0"
-                            value={editScores.tens}
-                            onChange={(e) =>
-                              setEditScores(prev => ({ ...prev, tens: parseInt(e.target.value) || 0 }))
-                            }
-                            className="w-20 text-center"
-                          />
-                        ) : (
-                          player.tens
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center font-bold">
-                        {editingPlayer === player.player_id
-                          ? editScores.twos * 2 + editScores.fives * 5 + editScores.tens * 10
-                          : player.total_points}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {editingPlayer === player.player_id ? (
-                          <div className="flex gap-2 justify-center">
-                            <Button
-                              size="sm"
-                              onClick={() => handleSave(player.player_id)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Save className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={handleCancel}
-                              className="h-8 w-8 p-0"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleEdit(player)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Edit3 className="h-4 w-4" />
-                          </Button>
-                        )}
+                      <TableCell className="text-center">{player.twos}</TableCell>
+                      <TableCell className="text-center">{player.fives}</TableCell>
+                      <TableCell className="text-center">{player.tens}</TableCell>
+                      <TableCell className="text-center font-bold">{player.total_points}</TableCell>
+                      <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEdit(player)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Edit3 className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -373,6 +439,25 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
           </Card>
         </TabsContent>
       </Tabs>
+
+      <EditScoreModal
+        isOpen={editingPlayer !== null}
+        onClose={() => setEditingPlayer(null)}
+        player={editingPlayer}
+        eventId={eventId}
+        onSave={handleSave}
+      />
+
+      <IndividualStandingsReviewModal
+        isOpen={showStandingsModal}
+        onClose={() => setShowStandingsModal(false)}
+        eventId={eventId}
+        onComplete={() => {
+          setShowStandingsModal(false)
+          // Refresh the page to show updated standings
+          window.location.reload()
+        }}
+      />
     </div>
   )
 } 
