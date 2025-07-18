@@ -34,6 +34,7 @@ export async function GET(
         // Get standings with team names, points, and disqualification status
         const standingsResult = await pool.query(`
             SELECT 
+                t.team_id,
                 t.team_name,
                 p.point_value,
                 es.disqualified,

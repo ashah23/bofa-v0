@@ -86,7 +86,7 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
       setLoading(true)
       const response = await fetch(`/api/events/${eventId}/double-elimination-matches`)
       const result = await response.json()
-      
+
       if (result.success) {
         setData(result)
       } else {
@@ -120,7 +120,7 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
       })
 
       const result = await response.json()
-      
+
       if (result.success) {
         await fetchData() // Refresh the data
         // Ensure we stay on the matches tab
@@ -148,7 +148,7 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
       })
 
       const result = await response.json()
-      
+
       if (result.success) {
         await fetchData() // Refresh the data
         // Ensure we stay on the matches tab
@@ -175,7 +175,7 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
       })
 
       const result = await response.json()
-      
+
       if (result.success) {
         await fetchData() // Refresh the data
         // Ensure we stay on the matches tab
@@ -216,7 +216,7 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
     const isFinal = match.bracket === 'F' ? 1 : 0
     const round = Math.abs(match.round)
     return isFinal * 1000 + round * 100 + match.match_number
-  
+
   }
 
   const sortMatchesByPlayOrder = (matches: Match[]) => {
@@ -224,10 +224,10 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
       // First, prioritize matches that are ready to play
       const aReady = a.team1_id && a.team2_id && !a.winner_id
       const bReady = b.team1_id && b.team2_id && !b.winner_id
-      
+
       if (aReady && !bReady) return -1
       if (!aReady && bReady) return 1
-      
+
       // Then sort by priority
       return getMatchPriority(a) - getMatchPriority(b)
     })
@@ -271,13 +271,13 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
     )
   }
 
-  const totalMatches = (data?.matches.winner.length || 0) + 
-                      (data?.matches.loser.length || 0) + 
-                      (data?.matches.final.length || 0)
-  
+  const totalMatches = (data?.matches.winner.length || 0) +
+    (data?.matches.loser.length || 0) +
+    (data?.matches.final.length || 0)
+
   const completedMatches = (data?.matches.winner?.filter(m => m.winner_id).length || 0) +
-                          (data?.matches.loser?.filter(m => m.winner_id).length || 0) +
-                          (data?.matches.final?.filter(m => m.winner_id).length || 0)
+    (data?.matches.loser?.filter(m => m.winner_id).length || 0) +
+    (data?.matches.final?.filter(m => m.winner_id).length || 0)
 
   const allMatches = [
     ...(data?.matches.winner || []),
@@ -349,18 +349,18 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
         </CardContent>
       </Card>
 
-              {/* Main Content Tabs */}
-        <Tabs defaultValue="bracket" className="w-full" value={currentTab} onValueChange={setCurrentTab}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="bracket" className="flex items-center gap-2">
-              <Eye className="h-4 w-4" />
-              Bracket View
-            </TabsTrigger>
-            <TabsTrigger value="matches" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Manage Matches
-            </TabsTrigger>
-          </TabsList>
+      {/* Main Content Tabs */}
+      <Tabs defaultValue="bracket" className="w-full" value={currentTab} onValueChange={setCurrentTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="bracket" className="flex items-center gap-2">
+            <Eye className="h-4 w-4" />
+            Bracket View
+          </TabsTrigger>
+          <TabsTrigger value="matches" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Manage Matches
+          </TabsTrigger>
+        </TabsList>
 
         <TabsContent value="bracket" className="mt-6">
           <Card>
@@ -371,9 +371,9 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
             <CardContent>
               {data && (
                 <div className="overflow-x-auto">
-                  <ReactBracketView 
-                    data={data} 
-                    eventId={eventId} 
+                  <ReactBracketView
+                    data={data}
+                    eventId={eventId}
                     onUpdateMatch={updateMatchResult}
                     readOnly={true}
                   />
@@ -404,7 +404,14 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
                               <Badge variant={standing.rank <= 3 ? "default" : "secondary"}>
                                 #{standing.rank}
                               </Badge>
-                              <span className="font-medium text-sm sm:text-base">{standing.teamName}</span>
+                              <span className="font-medium text-sm sm:text-base">
+                                <Link
+                                  href={`/teams/${standing.teamId}`}
+                                  className="hover:text-primary hover:underline transition-colors"
+                                >
+                                  {standing.teamName}
+                                </Link>
+                              </span>
                             </div>
                             <div className="text-right">
                               <p className="text-sm sm:text-base font-semibold">{standing.wins}W - {standing.losses}L</p>
@@ -429,7 +436,7 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
                   {sortedMatches.map((match) => {
                     const status = getMatchStatus(match)
                     const isPlayable = match.team1_id && match.team2_id && !match.winner_id
-                    
+
                     return (
                       <Card key={match.match_id} className="border-l-4 border-l-blue-500">
                         <CardContent className="p-4 sm:p-6">
@@ -449,16 +456,32 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
                               <div className="text-center sm:text-left">
                                 <p className="text-sm sm:text-base">
                                   <span className={`font-semibold ${match.team1_name ? 'text-blue-600' : 'text-gray-600'}`}>
-                                    {match.team1_name || 'TBD'}
+                                    <Link
+                                      href={match.team1_id ? `/teams/${match.team1_id}` : '#'}
+                                      className="hover:text-primary hover:underline transition-colors"
+                                    >
+                                      {match.team1_name || 'TBD'}
+                                    </Link>
                                   </span>
                                   <span className="mx-2">vs</span>
                                   <span className={`font-semibold ${match.team2_name ? 'text-blue-600' : 'text-gray-600'}`}>
-                                    {match.team2_name || 'TBD'}
+                                    <Link
+                                      href={match.team2_id ? `/teams/${match.team2_id}` : '#'}
+                                      className="hover:text-primary hover:underline transition-colors"
+                                    >
+                                      {match.team2_name || 'TBD'}
+                                    </Link>
                                   </span>
                                 </p>
                                 {match.winner_name && (
                                   <p className="text-xs text-green-600 mt-1">
-                                    Winner: {match.winner_name}
+                                    Winner:
+                                    <Link
+                                      href={match.winner_id ? `/teams/${match.winner_id}` : '#'}
+                                      className="hover:text-primary hover:underline transition-colors ml-1"
+                                    >
+                                      {match.winner_name}
+                                    </Link>
                                   </p>
                                 )}
                               </div>
@@ -467,13 +490,13 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
                               {isPlayable && (
                                 <Dialog>
                                   <DialogTrigger asChild>
-                                                                    <Button 
-                                  size="sm"
-                                  disabled={updatingMatch}
-                                  className="text-xs sm:text-sm px-2 sm:px-3"
-                                >
-                                  {updatingMatch ? 'Updating...' : 'Record Result'}
-                                </Button>
+                                    <Button
+                                      size="sm"
+                                      disabled={updatingMatch}
+                                      className="text-xs sm:text-sm px-2 sm:px-3"
+                                    >
+                                      {updatingMatch ? 'Updating...' : 'Record Result'}
+                                    </Button>
                                   </DialogTrigger>
                                   <DialogContent>
                                     <DialogHeader>
@@ -507,12 +530,12 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
                                   </DialogContent>
                                 </Dialog>
                               )}
-                              
+
                               {match.winner_id && (
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
-                                    <Button 
-                                      variant="outline" 
+                                    <Button
+                                      variant="outline"
                                       size="sm"
                                       disabled={resettingMatch === match.match_id}
                                       className="text-xs sm:text-sm px-2 sm:px-3"
@@ -564,8 +587,8 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
               <CardContent>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button 
-                      variant="destructive" 
+                    <Button
+                      variant="destructive"
                       disabled={resettingBracket}
                     >
                       <RefreshCw className="h-4 w-4 mr-2" />

@@ -43,9 +43,12 @@ export async function GET(
                 p.comments,
                 p.updated_at,
                 p.point_type,
-                COALESCE(e.event_name, 'General') as event_name
+                p.event_id,
+                COALESCE(e.event_name, 'General') as event_name,
+                es.disqualified
             FROM points p
             LEFT JOIN events e ON p.event_id = e.event_id
+            LEFT JOIN event_standings es ON p.event_id = es.event_id AND p.team_id = es.team_id
             WHERE p.team_id = $1
             ORDER BY p.updated_at DESC
         `, [teamId]);

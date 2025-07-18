@@ -11,6 +11,7 @@ import { Trophy, Medal, Award, Edit3, Users, CheckCircle, RotateCcw } from 'luci
 import { useToast } from '@/hooks/use-toast'
 import { EditScoreModal } from '@/components/edit-score-modal'
 import { IndividualStandingsReviewModal } from '@/components/individual-standings-review-modal'
+import Link from 'next/link'
 
 interface Player {
   player_id: number
@@ -47,6 +48,7 @@ interface IndividualEventViewProps {
 export function IndividualEventView({ event, eventId }: IndividualEventViewProps) {
   const [players, setPlayers] = useState<Player[]>([])
   const [teamStandings, setTeamStandings] = useState<TeamStanding[]>([])
+  const [eventStandings, setEventStandings] = useState<any[]>([])
   const [selectedTeam, setSelectedTeam] = useState<string>('all')
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null)
   const [showStandingsModal, setShowStandingsModal] = useState(false)
@@ -67,10 +69,16 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
       }
       const data = await response.json()
       setPlayers(data.players || [])
-      
+
       // Calculate team standings
       const teamData = await fetchTeamStandings()
       setTeamStandings(teamData)
+
+      // Fetch event standings if event is completed
+      if (event.event_status === 'COMPLETED') {
+        const eventStandingsData = await fetchEventStandings()
+        setEventStandings(eventStandingsData)
+      }
     } catch (error) {
       console.error('Error fetching scores:', error)
       toast({
@@ -93,6 +101,20 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
       return data.standings || []
     } catch (error) {
       console.error('Error fetching team standings:', error)
+      return []
+    }
+  }
+
+  const fetchEventStandings = async (): Promise<any[]> => {
+    try {
+      const response = await fetch(`/api/events/${eventId}/standings`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch event standings')
+      }
+      const data = await response.json()
+      return data.standings || []
+    } catch (error) {
+      console.error('Error fetching event standings:', error)
       return []
     }
   }
@@ -144,9 +166,9 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
     const now = Date.now()
     const DOUBLE_TAP_DELAY = 300 // milliseconds
 
-    if (lastTap && 
-        lastTap.playerId === player.player_id && 
-        now - lastTap.time < DOUBLE_TAP_DELAY) {
+    if (lastTap &&
+      lastTap.playerId === player.player_id &&
+      now - lastTap.time < DOUBLE_TAP_DELAY) {
       // Double tap detected
       setEditingPlayer(player)
       setLastTap(null) // Reset for next double tap
@@ -160,8 +182,8 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
   const teams = Array.from(new Set(players.map(p => p.team_name).filter((name): name is string => Boolean(name))))
 
   // Filter players by selected team
-  const filteredPlayers = selectedTeam === 'all' 
-    ? players 
+  const filteredPlayers = selectedTeam === 'all'
+    ? players
     : players.filter(player => player.team_name === selectedTeam)
 
   const getRankIcon = (rank: number) => {
@@ -207,8 +229,8 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
         </div>
         <div className="flex items-center gap-4">
           {event.event_status !== 'COMPLETED' && (
-            <Button 
-              onClick={() => setShowStandingsModal(true)} 
+            <Button
+              onClick={() => setShowStandingsModal(true)}
               variant="default"
               className="flex items-center gap-2"
             >
@@ -217,8 +239,8 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
             </Button>
           )}
           {event.event_status === 'COMPLETED' && (
-            <Button 
-              onClick={handleReset} 
+            <Button
+              onClick={handleReset}
               variant="outline"
               className="flex items-center gap-2"
             >
@@ -232,17 +254,25 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
         </div>
       </div>
 
-      <Tabs defaultValue="team-standings" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="team-standings">Current Standings</TabsTrigger>
-          <TabsTrigger value="top-performers">Top Performers</TabsTrigger>
-          {event.event_status !== 'COMPLETED' && (
-            <TabsTrigger value="scores">Score Table</TabsTrigger>
+      <Tabs defaultValue={event.event_status === 'COMPLETED' ? "event-standings" : "team-standings"} className="w-full">
+        <TabsList className={`grid w-full ${event.event_status === 'COMPLETED' ? 'grid-cols-2' : 'grid-cols-3'}`}>
+          {event.event_status === 'COMPLETED' ? (
+            <>
+              <TabsTrigger value="event-standings">Event Standings</TabsTrigger>
+              <TabsTrigger value="top-performers">Top Performers</TabsTrigger>
+            </>
+          ) : (
+            <>
+              <TabsTrigger value="team-standings">Current Standings</TabsTrigger>
+              <TabsTrigger value="top-performers">Top Performers</TabsTrigger>
+              <TabsTrigger value="scores">Score Table</TabsTrigger>
+            </>
           )}
         </TabsList>
 
-        <TabsContent value="team-standings" className="space-y-4">
-          {event.event_status === 'COMPLETED' ? (
+        {/* Event Standings Tab (only shown when completed) */}
+        {event.event_status === 'COMPLETED' && (
+          <TabsContent value="event-standings" className="space-y-4">
             <div className="space-y-8">
               {/* Olympic Podium */}
               <div className="mb-8">
@@ -255,8 +285,13 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
                     {/* 2nd Place */}
                     <div className="w-1/3 h-[160px] bg-gray-200 rounded-t-xl flex flex-col items-center justify-center relative">
                       <Award className="h-10 w-10 text-gray-400 mb-2" />
-                      <span className="font-bold text-gray-600">{teamStandings[1]?.team_name}</span>
-                      <span className="text-sm text-gray-500">{teamStandings[1]?.total_points} pts</span>
+                      <Link
+                        href={`/teams/${eventStandings[1]?.team_id}`}
+                        className="font-bold text-gray-600 hover:text-gray-800 hover:underline transition-colors"
+                      >
+                        {eventStandings[1]?.team_name}
+                      </Link>
+                      <span className="text-sm text-gray-500">{eventStandings[1]?.point_value} pts</span>
                       <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-gray-200 px-4 py-1 rounded-full">
                         <span className="font-bold text-gray-600">2nd</span>
                       </div>
@@ -265,8 +300,13 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
                     {/* 1st Place */}
                     <div className="w-1/3 h-[200px] bg-yellow-100 rounded-t-xl flex flex-col items-center justify-center relative">
                       <Trophy className="h-12 w-12 text-yellow-500 mb-2" />
-                      <span className="font-bold text-yellow-600">{teamStandings[0]?.team_name}</span>
-                      <span className="text-sm text-yellow-500">{teamStandings[0]?.total_points} pts</span>
+                      <Link
+                        href={`/teams/${eventStandings[0]?.team_id}`}
+                        className="font-bold text-yellow-600 hover:text-yellow-800 hover:underline transition-colors"
+                      >
+                        {eventStandings[0]?.team_name}
+                      </Link>
+                      <span className="text-sm text-yellow-500">{eventStandings[0]?.point_value} pts</span>
                       <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-yellow-100 px-4 py-1 rounded-full">
                         <span className="font-bold text-yellow-600">1st</span>
                       </div>
@@ -275,8 +315,13 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
                     {/* 3rd Place */}
                     <div className="w-1/3 h-[120px] bg-amber-100 rounded-t-xl flex flex-col items-center justify-center relative">
                       <Award className="h-8 w-8 text-amber-700 mb-2" />
-                      <span className="font-bold text-amber-700">{teamStandings[2]?.team_name}</span>
-                      <span className="text-sm text-amber-600">{teamStandings[2]?.total_points} pts</span>
+                      <Link
+                        href={`/teams/${eventStandings[2]?.team_id}`}
+                        className="font-bold text-amber-700 hover:text-amber-900 hover:underline transition-colors"
+                      >
+                        {eventStandings[2]?.team_name}
+                      </Link>
+                      <span className="text-sm text-amber-600">{eventStandings[2]?.point_value} pts</span>
                       <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-amber-100 px-4 py-1 rounded-full">
                         <span className="font-bold text-amber-700">3rd</span>
                       </div>
@@ -286,7 +331,7 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
               </div>
 
               {/* Final Standings Table */}
-              {teamStandings.length > 3 && (
+              {eventStandings.length > 3 && (
                 <div className="rounded-md border">
                   <table className="w-full">
                     <thead>
@@ -297,11 +342,24 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
                       </tr>
                     </thead>
                     <tbody>
-                      {teamStandings.slice(3).map((team, index) => (
-                        <tr key={team.team_id} className="border-b transition-colors hover:bg-muted/50">
-                          <td className="p-4 align-middle">{index + 4}</td>
-                          <td className="p-4 align-middle font-medium">{team.team_name}</td>
-                          <td className="p-4 align-middle text-right">{team.total_points}</td>
+                      {eventStandings.slice(3).map((standing: any) => (
+                        <tr key={standing.team_id} className={`border-b transition-colors hover:bg-muted/50 ${standing.disqualified ? 'bg-red-50' : ''}`}>
+                          <td className="p-4 align-middle">
+                            {standing.disqualified ? (
+                              <span className="text-red-600 font-bold">DQ</span>
+                            ) : (
+                              standing.rank
+                            )}
+                          </td>
+                          <td className={`p-4 align-middle font-medium ${standing.disqualified ? 'text-red-600 line-through' : ''}`}>
+                            <Link
+                              href={`/teams/${standing.team_id}`}
+                              className="hover:text-primary hover:underline transition-colors"
+                            >
+                              {standing.team_name}
+                            </Link>
+                          </td>
+                          <td className="p-4 align-middle text-right">{standing.point_value}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -309,7 +367,12 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
                 </div>
               )}
             </div>
-          ) : (
+          </TabsContent>
+        )}
+
+        {/* Current Standings Tab (only shown when not completed) */}
+        {event.event_status !== 'COMPLETED' && (
+          <TabsContent value="team-standings" className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {teamStandings.map((team, index) => (
                 <div key={team.team_id} className="relative">
@@ -317,12 +380,19 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
                   <div className="absolute -top-2 -left-2 z-10">
                     {getRankBadge(index + 1)}
                   </div>
-                  
+
                   <Card className="hover:shadow-md transition-shadow">
                     <CardContent className="p-4">
                       <div className="pt-2">
                         <div className="flex items-center justify-between mb-3">
-                          <div className="font-semibold text-lg">{team.team_name}</div>
+                          <div className="font-semibold text-lg">
+                            <Link
+                              href={`/teams/${team.team_id}`}
+                              className="hover:text-primary hover:underline transition-colors"
+                            >
+                              {team.team_name}
+                            </Link>
+                          </div>
                           <div className="text-xl font-bold text-primary">
                             {team.total_points} pts
                           </div>
@@ -336,8 +406,8 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
                 </div>
               ))}
             </div>
-          )}
-        </TabsContent>
+          </TabsContent>
+        )}
 
         <TabsContent value="top-performers" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -347,7 +417,7 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
                 <div className="absolute -top-2 -left-2 z-10">
                   {getRankBadge(index + 1)}
                 </div>
-                
+
                 <Card className="hover:shadow-md transition-shadow">
                   <CardContent className="p-4">
                     <div className="pt-2">
@@ -395,7 +465,7 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -410,7 +480,7 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
                 </TableHeader>
                 <TableBody>
                   {filteredPlayers.map((player) => (
-                    <TableRow 
+                    <TableRow
                       key={player.player_id}
                       onClick={() => handleRowClick(player)}
                       className="cursor-pointer hover:bg-muted/50 transition-colors"

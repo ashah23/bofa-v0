@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ChevronUp, ChevronDown, Trophy, Medal, Award, XCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import Link from "next/link"
 
 interface TeamStanding {
   team_id: number
@@ -43,7 +44,7 @@ export function IndividualStandingsReviewModal({ isOpen, onClose, eventId, onCom
     try {
       setLoading(true)
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events/${eventId}/team-standings`)
-      
+
       if (!response.ok) {
         const errorData = await response.json()
         throw new Error(errorData.error || 'Failed to fetch team standings')
@@ -56,7 +57,7 @@ export function IndividualStandingsReviewModal({ isOpen, onClose, eventId, onCom
           ...team,
           rank: index + 1
         }))
-      
+
       setTeamStandings(sortedTeams)
     } catch (error) {
       console.error('Error fetching team standings:', error)
@@ -97,11 +98,11 @@ export function IndividualStandingsReviewModal({ isOpen, onClose, eventId, onCom
   const toggleDisqualification = (teamId: number) => {
     const newStandings = [...teamStandings]
     const teamIndex = newStandings.findIndex(standing => standing.team_id === teamId)
-    
+
     if (teamIndex !== -1) {
       const team = newStandings[teamIndex]
       team.disqualified = !team.disqualified
-      
+
       if (team.disqualified) {
         // Set disqualified team to last place
         team.rank = teamStandings.length
@@ -116,7 +117,7 @@ export function IndividualStandingsReviewModal({ isOpen, onClose, eventId, onCom
           newStandings.unshift(team)
         }
       }
-      
+
       // Recalculate ranks for non-disqualified teams
       let currentRank = 1
       newStandings.forEach((team) => {
@@ -125,7 +126,7 @@ export function IndividualStandingsReviewModal({ isOpen, onClose, eventId, onCom
           currentRank++
         }
       })
-      
+
       setTeamStandings(newStandings)
     }
   }
@@ -134,7 +135,7 @@ export function IndividualStandingsReviewModal({ isOpen, onClose, eventId, onCom
     if (disqualified) {
       return <XCircle className="h-5 w-5 text-red-500" />
     }
-    
+
     switch (rank) {
       case 1:
         return <Trophy className="h-5 w-5 text-yellow-500" />
@@ -150,38 +151,27 @@ export function IndividualStandingsReviewModal({ isOpen, onClose, eventId, onCom
   const handleSubmit = async () => {
     try {
       setSubmitting(true)
-      
-      // Calculate points based on final rankings
-      const point_values = [15, 12, 10, 8, 7, 6, 5, 4, 3, 2, 1, 0]
-      
-      // Clear existing points for this event
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events/${eventId}/individual-scores`, {
-        method: 'DELETE'
-      })
 
-      // Save new points based on final team rankings
-      for (const team of teamStandings) {
-        const points = team.disqualified ? 0 : (point_values[(team.rank || 1) - 1] || 0)
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events/${eventId}/individual-scores`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            teamId: team.team_id,
-            points: points,
-            eventId: eventId
-          })
-        })
-      }
+      // Prepare standings data in the correct format for save-standings endpoint
+      const standings = teamStandings.map(team => ({
+        team_id: team.team_id,
+        rank: team.rank || 1,
+        disqualified: team.disqualified || false
+      }))
 
-      // Update event status to completed
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events/${eventId}/complete`, {
+      // Use the save-standings endpoint which properly handles points
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events/${eventId}/save-standings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({ standings })
       })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to save standings')
+      }
 
       toast({
         title: "Success",
@@ -225,69 +215,74 @@ export function IndividualStandingsReviewModal({ isOpen, onClose, eventId, onCom
               {teamStandings
                 .sort((a, b) => (a.rank || 0) - (b.rank || 0))
                 .map((team, index) => (
-                <Card key={team.team_id} className={`relative ${team.disqualified ? 'border-red-200 bg-red-50' : ''}`}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2">
-                          {getRankIcon(team.rank || 1, team.disqualified)}
-                          <div>
-                            <span className={`font-semibold ${team.disqualified ? 'text-red-600 line-through' : ''}`}>
-                              {team.team_name}
+                  <Card key={team.team_id} className={`relative ${team.disqualified ? 'border-red-200 bg-red-50' : ''}`}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
+                            {getRankIcon(team.rank || 1, team.disqualified)}
+                            <div>
+                              <span className={`font-semibold ${team.disqualified ? 'text-red-600 line-through' : ''}`}>
+                                <Link
+                                  href={`/teams/${team.team_id}`}
+                                  className="hover:text-primary hover:underline transition-colors"
+                                >
+                                  {team.team_name}
+                                </Link>
+                              </span>
+                              {team.disqualified && (
+                                <Badge variant="destructive" className="text-xs ml-2">
+                                  DQ
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <Badge variant="outline" className="text-xs">
+                              {team.total_points} pts
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {team.player_count} players • {team.twos} twos • {team.fives} fives • {team.tens} tens
                             </span>
-                            {team.disqualified && (
-                              <Badge variant="destructive" className="text-xs ml-2">
-                                DQ
-                              </Badge>
-                            )}
                           </div>
                         </div>
-                        <div className="flex flex-col gap-1">
-                          <Badge variant="outline" className="text-xs">
-                            {team.total_points} pts
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {team.player_count} players • {team.twos} twos • {team.fives} fives • {team.tens} tens
-                          </span>
+
+                        <div className="flex items-center gap-1">
+                          {!team.disqualified && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => moveTeam(index, 'up')}
+                                disabled={index === 0}
+                                className="h-8 w-8 p-0"
+                              >
+                                <ChevronUp className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => moveTeam(index, 'down')}
+                                disabled={index === teamStandings.length - 1}
+                                className="h-8 w-8 p-0"
+                              >
+                                <ChevronDown className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                          <Button
+                            size="sm"
+                            variant={team.disqualified ? "default" : "outline"}
+                            onClick={() => toggleDisqualification(team.team_id)}
+                            className="h-8 px-2 text-xs"
+                          >
+                            {team.disqualified ? "Reinstate" : "DQ"}
+                          </Button>
                         </div>
                       </div>
-                      
-                      <div className="flex items-center gap-1">
-                        {!team.disqualified && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => moveTeam(index, 'up')}
-                              disabled={index === 0}
-                              className="h-8 w-8 p-0"
-                            >
-                              <ChevronUp className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => moveTeam(index, 'down')}
-                              disabled={index === teamStandings.length - 1}
-                              className="h-8 w-8 p-0"
-                            >
-                              <ChevronDown className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                        <Button
-                          size="sm"
-                          variant={team.disqualified ? "default" : "outline"}
-                          onClick={() => toggleDisqualification(team.team_id)}
-                          className="h-8 px-2 text-xs"
-                        >
-                          {team.disqualified ? "Reinstate" : "DQ"}
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                ))}
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">

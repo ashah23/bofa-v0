@@ -13,6 +13,36 @@ async function getTeamWithPlayers(teamId: string) {
   return data.team;
 }
 
+// Helper function to get place name based on points
+function getPlaceName(points: number): string {
+  const placeMap: { [key: number]: string } = {
+    15: "1st Place",
+    12: "2nd Place",
+    10: "3rd Place",
+    8: "4th Place",
+    7: "5th Place",
+    6: "6th Place",
+    5: "7th Place",
+    4: "8th Place",
+    3: "9th Place",
+    2: "10th Place",
+    1: "11th Place",
+    0: "12th Place"
+  };
+  return placeMap[points] || `${points} Points`;
+}
+
+// Helper function to get display text for comments
+function getDisplayText(point: any): string {
+  if (point.point_type === 'EVENT') {
+    if (point.disqualified) {
+      return "Disqualified";
+    }
+    return getPlaceName(point.point_value);
+  }
+  return point.comments || '';
+}
+
 export default async function TeamPage({ params }: { params: Promise<{ teamId: string }> }) {
   const resolvedParams = await params;
   const team = await getTeamWithPlayers(resolvedParams.teamId)
@@ -68,7 +98,7 @@ export default async function TeamPage({ params }: { params: Promise<{ teamId: s
                     <td className="py-3 px-4 text-right font-bold text-sm">
                       {point.point_value > 0 ? `+${point.point_value}` : point.point_value}
                     </td>
-                    <td className="py-3 px-4 text-sm">{point.comments}</td>
+                    <td className="py-3 px-4 text-sm">{getDisplayText(point)}</td>
                     <td className="py-3 px-4 text-right text-muted-foreground text-sm">
                       {formatDistanceToNow(new Date(point.updated_at), { addSuffix: true })}
                     </td>

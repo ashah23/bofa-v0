@@ -1,11 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Award, Medal, Skull } from "lucide-react"
+import Link from "next/link"
 
 async function getStandings() {
   // Get points data with team names in a single query
   const pointsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/points`, { cache: 'no-store' });
   if (!pointsRes.ok) throw new Error('Failed to fetch points');
   const pointsData = await pointsRes.json();
+  console.log(pointsData);
 
   // Group teams by points to handle ties
   const teamsByPoints = pointsData.points.reduce((acc: any, team: any) => {
@@ -31,7 +33,7 @@ async function getStandings() {
   sortedPoints.forEach((points) => {
     const teams = teamsByPoints[points];
     const isTie = teams.length > 1;
-    
+
     teams.forEach((team: any) => {
       standings.push({
         ...team,
@@ -40,7 +42,7 @@ async function getStandings() {
         tieCount: teams.length
       });
     });
-    
+
     // Move to next rank (skip tied positions)
     currentRank += teams.length;
   });
@@ -53,7 +55,7 @@ export default async function StandingsPage() {
 
   const getRankDisplay = (team: any) => {
     const { rank, isTie, tieCount } = team;
-    
+
     if (rank === 1) {
       if (isTie) {
         return (
@@ -71,7 +73,7 @@ export default async function StandingsPage() {
         );
       }
     }
-    
+
     if (rank === 2) {
       if (isTie) {
         return (
@@ -89,7 +91,7 @@ export default async function StandingsPage() {
         );
       }
     }
-    
+
     if (rank === 3) {
       if (isTie) {
         return (
@@ -107,7 +109,7 @@ export default async function StandingsPage() {
         );
       }
     }
-    
+
     // Handle last place (assuming 12 teams total)
     if (rank === 12) {
       return (
@@ -117,18 +119,18 @@ export default async function StandingsPage() {
         </div>
       );
     }
-    
+
     // For other ranks, show the actual rank number
     return <span className="w-4 md:w-5 mr-1 md:mr-2 text-sm md:text-base">{rank}</span>;
   };
 
   const getRowBackground = (team: any) => {
     const { rank, isTie } = team;
-    
+
     if (rank === 1) return 'bg-yellow-50';
     if (rank === 2) return 'bg-gray-50';
     if (rank === 3) return 'bg-amber-50';
-    
+
     return 'hover:bg-muted/50';
   };
 
@@ -161,7 +163,14 @@ export default async function StandingsPage() {
                         {getRankDisplay(team)}
                       </div>
                     </td>
-                    <td className="py-2 md:py-3 px-2 md:px-4 font-medium text-sm md:text-base">{team.name}</td>
+                    <td className="py-2 md:py-3 px-2 md:px-4 font-medium text-sm md:text-base">
+                      <Link
+                        href={`/teams/${team.team_id}`}
+                        className="hover:text-primary hover:underline transition-colors"
+                      >
+                        {team.name}
+                      </Link>
+                    </td>
                     <td className="py-2 md:py-3 px-2 md:px-4 text-right font-bold text-sm md:text-base">{team.points}</td>
                   </tr>
                 ))}
