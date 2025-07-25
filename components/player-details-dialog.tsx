@@ -4,7 +4,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
-import { Beer, Book, User, Volleyball } from "lucide-react"
+import { Beer, Book, User, Volleyball, Trophy } from "lucide-react"
 
 interface PlayerDetailsDialogProps {
     player: {
@@ -13,7 +13,8 @@ interface PlayerDetailsDialogProps {
         email: string
         athleticism: number
         alcohol_tolerance: number
-        reading_comprehension: number
+        listening_comprehension: number
+        competitiveness: number
     } | null
     open: boolean
     onOpenChange: (open: boolean) => void
@@ -61,8 +62,13 @@ export function PlayerDetailsDialog({ player, open, onOpenChange }: PlayerDetail
                         </div>
 
                         <div className="space-y-2">
-                            <div className="text-sm font-medium">Reading Comprehension</div>
-                            {renderIcons(player.reading_comprehension, Book, "text-blue-500")}
+                            <div className="text-sm font-medium">Listening Comprehension</div>
+                            {renderIcons(player.listening_comprehension, Book, "text-blue-500")}
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="text-sm font-medium">Competitiveness</div>
+                            {renderIcons(player.competitiveness, Trophy, "text-purple-500")}
                         </div>
                     </div>
                 </div>

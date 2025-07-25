@@ -26,12 +26,6 @@ export default async function TeamsPage() {
                   <Users className="h-4 w-4 md:h-5 md:w-5 text-blue-500" />
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs md:text-sm text-muted-foreground">Created</span>
-                  <span className="text-xs md:text-sm font-bold">{new Date(team.created_at).toLocaleDateString()}</span>
-                </div>
-              </CardContent>
             </Card>
           </Link>
         ))}

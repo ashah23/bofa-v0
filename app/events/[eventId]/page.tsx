@@ -5,7 +5,8 @@ import { notFound, redirect } from "next/navigation"
 import { HeatEventView } from "@/components/heat-event-view"
 import { DoubleEliminationEventView } from "@/components/double-elimination-event-view"
 import { GroupKnockoutEventView } from "@/components/group-knockout-event-view"
-import { startHeat, completeHeat, completeHeatEvent, resetHeatEvent } from "./heat_actions"
+import { WorldCupEventView } from "@/components/world-cup-event-view"
+import { startHeat, completeHeat, resetHeatEvent } from "./heat_actions"
 
 async function getEventDetails(eventId: string) {
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events/${eventId}`, {
@@ -89,7 +90,10 @@ export default async function EventPage({ params }: { params: Promise<{ eventId:
       {event.event_type === 'DOUBLE-ELIM' && (
         <DoubleEliminationEventView event={event} eventId={eventId} />
       )}
-      {event.event_type !== 'HEAT' && event.event_type !== 'DOUBLE-ELIM' && (
+      {event.event_type === 'WORLD-CUP' && (
+        <WorldCupEventView event={event} eventId={eventId} />
+      )}
+      {event.event_type !== 'HEAT' && event.event_type !== 'DOUBLE-ELIM' && event.event_type !== 'WORLD-CUP' && (
         <GroupKnockoutEventView event={event} eventId={eventId} />
       )}
     </div>

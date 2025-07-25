@@ -10,7 +10,8 @@ interface Player {
     email: string
     athleticism: number
     alcohol_tolerance: number
-    reading_comprehension: number
+    listening_comprehension: number
+    competitiveness: number
 }
 
 interface TeamPlayersProps {

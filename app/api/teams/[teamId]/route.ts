@@ -30,7 +30,7 @@ export async function GET(
         // Get players for this team
         const playersResult = await pool.query(`
             SELECT player_id, player_name, email, created_at,
-                   athleticism, alcohol_tolerance, reading_comprehension
+                   athleticism, alcohol_tolerance, listening_comprehension, competitiveness
             FROM players
             WHERE team_id = $1
             ORDER BY player_name
