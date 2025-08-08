@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, Award, AlertTriangle, CheckCircle, Clock } from "lucide-react"
+import { Plus, Award, AlertTriangle, CheckCircle, Clock, XCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useRefModeGuard } from "@/hooks/use-ref-mode-guard"
 
 interface Team {
   team_id: number
@@ -43,6 +44,7 @@ export default function ExtraPointsPage() {
     comments: ''
   })
   const { toast } = useToast()
+  const { guardRefModeAsync } = useRefModeGuard()
 
   useEffect(() => {
     fetchData()
@@ -92,52 +94,47 @@ export default function ExtraPointsPage() {
     }
 
     try {
-      setSubmitting(true)
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/extra-points`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          team_id: parseInt(formData.team_id),
-          point_value: formData.category === 'PENALTY' ? -Math.abs(parseInt(formData.point_value)) : Math.abs(parseInt(formData.point_value)),
-          category: formData.category,
-          comments: formData.comments || null
+      await guardRefModeAsync(async () => {
+        setSubmitting(true)
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/extra-points`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            team_id: parseInt(formData.team_id),
+            point_value: formData.category === 'PENALTY' ? -Math.abs(parseInt(formData.point_value)) : Math.abs(parseInt(formData.point_value)),
+            category: formData.category,
+            comments: formData.comments || null
+          })
         })
-      })
 
-      const data = await response.json()
+        const data = await response.json()
 
-      if (data.success) {
-        toast({
-          title: "Success",
-          description: "Extra point added successfully",
-        })
-        
-        // Reset form
-        setFormData({
-          team_id: '',
-          point_value: '',
-          category: '',
-          comments: ''
-        })
-        
-        // Refresh data
-        fetchData()
-      } else {
-        toast({
-          title: "Error",
-          description: data.message || "Failed to add extra point",
-          variant: "destructive"
-        })
-      }
-    } catch (error) {
-      console.error('Error submitting form:', error)
-      toast({
-        title: "Error",
-        description: "Failed to submit form",
-        variant: "destructive"
-      })
+        if (data.success) {
+          toast({
+            title: "Success",
+            description: "Extra point added successfully",
+          })
+          
+          // Reset form
+          setFormData({
+            team_id: '',
+            point_value: '',
+            category: '',
+            comments: ''
+          })
+          
+          // Refresh data
+          fetchData()
+        } else {
+          toast({
+            title: "Error",
+            description: data.message || "Failed to add extra point",
+            variant: "destructive"
+          })
+        }
+      }, "add extra points")
     } finally {
       setSubmitting(false)
     }
@@ -166,45 +163,42 @@ export default function ExtraPointsPage() {
 
   const handleStatusUpdate = async (pointId: number, newStatus: 'APPROVED' | 'REJECTED') => {
     try {
-      setUpdatingStatus(pointId)
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/extra-points`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id: pointId,
-          status: newStatus,
-          refereeComment: refereeComments[pointId] || null
+      await guardRefModeAsync(async () => {
+        setUpdatingStatus(pointId)
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/extra-points`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            id: pointId,
+            status: newStatus,
+            refereeComment: refereeComments[pointId] || null
+          })
         })
-      })
 
-      const data = await response.json()
+        const data = await response.json()
 
-      if (data.success) {
-        toast({
-          title: "Success",
-          description: data.message,
-        })
-        // Clear the comment and hide input for this point
-        setRefereeComments(prev => ({ ...prev, [pointId]: '' }))
-        setShowCommentInput(prev => ({ ...prev, [pointId]: false }))
-        // Refresh data to update the lists
-        fetchData()
-      } else {
-        toast({
-          title: "Error",
-          description: data.message || "Failed to update status",
-          variant: "destructive"
-        })
-      }
-    } catch (error) {
-      console.error('Error updating status:', error)
-      toast({
-        title: "Error",
-        description: "Failed to update status",
-        variant: "destructive"
-      })
+        if (data.success) {
+          toast({
+            title: "Success",
+            description: `Point ${newStatus.toLowerCase()} successfully`,
+          })
+          
+          // Clear comment input
+          setRefereeComments(prev => ({ ...prev, [pointId]: '' }))
+          setShowCommentInput(prev => ({ ...prev, [pointId]: false }))
+          
+          // Refresh data
+          fetchData()
+        } else {
+          toast({
+            title: "Error",
+            description: data.message || "Failed to update point status",
+            variant: "destructive"
+          })
+        }
+      }, "update point status")
     } finally {
       setUpdatingStatus(null)
     }

@@ -27,6 +27,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { useToast } from '@/hooks/use-toast'
+import { useRefModeGuard } from "@/hooks/use-ref-mode-guard"
+import { useRefMode } from "@/components/ref-mode-context"
 
 interface Match {
   match_id: number
@@ -80,6 +83,9 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
   const [resettingBracket, setResettingBracket] = useState(false)
   const [updatingMatch, setUpdatingMatch] = useState(false)
   const [currentTab, setCurrentTab] = useState("bracket")
+  const { toast } = useToast()
+  const { guardRefModeAsync } = useRefModeGuard()
+  const { isRefMode } = useRefMode()
 
   const fetchData = async () => {
     try {
@@ -106,31 +112,34 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
 
   const updateMatchResult = async (matchId: number, winnerId: number, loserId: number) => {
     try {
-      setUpdatingMatch(true)
-      const response = await fetch(`/api/events/${eventId}/double-elimination-matches`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          matchId,
-          winnerId,
-          loserId
+      await guardRefModeAsync(async () => {
+        setUpdatingMatch(true)
+        const response = await fetch(`/api/events/${eventId}/double-elimination-matches`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            matchId,
+            winnerId,
+            loserId
+          })
         })
-      })
 
-      const result = await response.json()
+        const result = await response.json()
 
-      if (result.success) {
-        await fetchData() // Refresh the data
-        // Ensure we stay on the matches tab
-        setCurrentTab("matches")
-      } else {
-        alert('Failed to update match: ' + result.error)
-      }
-    } catch (err) {
-      alert('Failed to update match')
-      console.error('Error updating match:', err)
+        if (result.success) {
+          await fetchData() // Refresh the data
+          // Ensure we stay on the matches tab
+          setCurrentTab("matches")
+        } else {
+          toast({
+            title: "Error",
+            description: 'Failed to update match: ' + result.error,
+            variant: "destructive"
+          })
+        }
+      }, "update match result")
     } finally {
       setUpdatingMatch(false)
     }
@@ -138,27 +147,30 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
 
   const resetSingleMatch = async (matchId: number) => {
     try {
-      setResettingMatch(matchId)
-      const response = await fetch(`/api/events/${eventId}/double-elimination-matches`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ matchId })
-      })
+      await guardRefModeAsync(async () => {
+        setResettingMatch(matchId)
+        const response = await fetch(`/api/events/${eventId}/double-elimination-matches`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ matchId })
+        })
 
-      const result = await response.json()
+        const result = await response.json()
 
-      if (result.success) {
-        await fetchData() // Refresh the data
-        // Ensure we stay on the matches tab
-        setCurrentTab("matches")
-      } else {
-        alert('Failed to reset match: ' + result.error)
-      }
-    } catch (err) {
-      alert('Failed to reset match')
-      console.error('Error resetting match:', err)
+        if (result.success) {
+          await fetchData() // Refresh the data
+          // Ensure we stay on the matches tab
+          setCurrentTab("matches")
+        } else {
+          toast({
+            title: "Error",
+            description: 'Failed to reset match: ' + result.error,
+            variant: "destructive"
+          })
+        }
+      }, "reset match")
     } finally {
       setResettingMatch(null)
     }
@@ -166,26 +178,29 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
 
   const resetEntireBracket = async () => {
     try {
-      setResettingBracket(true)
-      const response = await fetch(`/api/events/${eventId}/double-elimination-reset`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      await guardRefModeAsync(async () => {
+        setResettingBracket(true)
+        const response = await fetch(`/api/events/${eventId}/double-elimination-reset`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        })
+
+        const result = await response.json()
+
+        if (result.success) {
+          await fetchData() // Refresh the data
+          // Ensure we stay on the matches tab
+          setCurrentTab("matches")
+        } else {
+          toast({
+            title: "Error",
+            description: 'Failed to reset bracket: ' + result.error,
+            variant: "destructive"
+          })
         }
-      })
-
-      const result = await response.json()
-
-      if (result.success) {
-        await fetchData() // Refresh the data
-        // Ensure we stay on the matches tab
-        setCurrentTab("matches")
-      } else {
-        alert('Failed to reset bracket: ' + result.error)
-      }
-    } catch (err) {
-      alert('Failed to reset bracket')
-      console.error('Error resetting bracket:', err)
+      }, "reset bracket")
     } finally {
       setResettingBracket(false)
     }
@@ -531,7 +546,7 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
                                 </Dialog>
                               )}
 
-                              {match.winner_id && (
+                              {match.winner_id && isRefMode && (
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
                                     <Button
@@ -579,22 +594,23 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
             </Card>
 
             {/* Reset Entire Bracket */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Tournament Management</CardTitle>
-                <CardDescription>Advanced tournament controls</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="destructive"
-                      disabled={resettingBracket}
-                    >
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      {resettingBracket ? 'Resetting...' : 'Reset Entire Bracket'}
-                    </Button>
-                  </AlertDialogTrigger>
+            {isRefMode && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Tournament Management</CardTitle>
+                  <CardDescription>Advanced tournament controls</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        disabled={resettingBracket}
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        {resettingBracket ? 'Resetting...' : 'Reset Entire Bracket'}
+                      </Button>
+                    </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>Reset Entire Bracket</AlertDialogTitle>
@@ -624,6 +640,7 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
                 </AlertDialog>
               </CardContent>
             </Card>
+            )}
           </div>
         </TabsContent>
       </Tabs>

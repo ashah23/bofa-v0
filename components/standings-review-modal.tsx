@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ChevronUp, ChevronDown, Clock, Trophy, Medal, Award, XCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useRefModeGuard } from "@/hooks/use-ref-mode-guard"
 
 interface Standing {
   team_id: number
@@ -28,6 +29,7 @@ export function StandingsReviewModal({ isOpen, onClose, eventId, onComplete }: S
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const { toast } = useToast()
+  const { guardRefModeAsync } = useRefModeGuard()
 
   useEffect(() => {
     if (isOpen) {
@@ -145,27 +147,29 @@ export function StandingsReviewModal({ isOpen, onClose, eventId, onComplete }: S
 
   const handleSubmit = async () => {
     try {
-      setSubmitting(true)
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events/${eventId}/save-standings`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ standings })
-      })
+      await guardRefModeAsync(async () => {
+        setSubmitting(true)
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events/${eventId}/save-standings`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ standings })
+        })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to save standings')
-      }
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to save standings')
+        }
 
-      toast({
-        title: "Success",
-        description: "Event completed and standings saved successfully",
-      })
+        toast({
+          title: "Success",
+          description: "Event completed and standings saved successfully",
+        })
 
-      onComplete()
-      onClose()
+        onComplete()
+        onClose()
+      }, "save event standings")
     } catch (error) {
       console.error('Error saving standings:', error)
       toast({

@@ -12,6 +12,8 @@ import { useToast } from '@/hooks/use-toast'
 import { EditScoreModal } from '@/components/edit-score-modal'
 import { IndividualStandingsReviewModal } from '@/components/individual-standings-review-modal'
 import Link from 'next/link'
+import { useRefModeGuard } from "@/hooks/use-ref-mode-guard"
+import { useRefMode } from "@/components/ref-mode-context"
 
 interface Player {
   player_id: number
@@ -55,6 +57,8 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
   const [loading, setLoading] = useState(true)
   const [lastTap, setLastTap] = useState<{ playerId: number; time: number } | null>(null)
   const { toast } = useToast()
+  const { guardRefModeAsync, guardRefMode } = useRefModeGuard()
+  const { isRefMode } = useRefMode()
 
   useEffect(() => {
     fetchScores()
@@ -120,7 +124,9 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
   }
 
   const handleEdit = (player: Player) => {
-    setEditingPlayer(player)
+    guardRefMode(() => {
+      setEditingPlayer(player)
+    }, "edit player scores")
   }
 
   const handleSave = () => {
@@ -132,7 +138,7 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
       return
     }
 
-    try {
+    await guardRefModeAsync(async () => {
       const response = await fetch(`/api/events/${eventId}/individual-reset`, {
         method: 'POST',
         headers: {
@@ -152,14 +158,7 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
 
       // Refresh the page to show updated state
       window.location.reload()
-    } catch (error) {
-      console.error('Error resetting event:', error)
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to reset event',
-        variant: 'destructive'
-      })
-    }
+    }, "reset event")
   }
 
   const handleRowClick = (player: Player) => {
@@ -170,8 +169,10 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
       lastTap.playerId === player.player_id &&
       now - lastTap.time < DOUBLE_TAP_DELAY) {
       // Double tap detected
-      setEditingPlayer(player)
-      setLastTap(null) // Reset for next double tap
+      guardRefMode(() => {
+        setEditingPlayer(player)
+        setLastTap(null) // Reset for next double tap
+      }, "edit player scores")
     } else {
       // Single tap - just update the last tap
       setLastTap({ playerId: player.player_id, time: now })
@@ -238,7 +239,7 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
               Complete Event & Calculate Standings
             </Button>
           )}
-          {event.event_status === 'COMPLETED' && (
+          {event.event_status === 'COMPLETED' && isRefMode && (
             <Button
               onClick={handleReset}
               variant="outline"

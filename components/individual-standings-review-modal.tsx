@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ChevronUp, ChevronDown, Trophy, Medal, Award, XCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useRefModeGuard } from "@/hooks/use-ref-mode-guard"
 import Link from "next/link"
 
 interface TeamStanding {
@@ -33,6 +34,7 @@ export function IndividualStandingsReviewModal({ isOpen, onClose, eventId, onCom
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const { toast } = useToast()
+  const { guardRefModeAsync } = useRefModeGuard()
 
   useEffect(() => {
     if (isOpen) {
@@ -150,36 +152,38 @@ export function IndividualStandingsReviewModal({ isOpen, onClose, eventId, onCom
 
   const handleSubmit = async () => {
     try {
-      setSubmitting(true)
+      await guardRefModeAsync(async () => {
+        setSubmitting(true)
 
-      // Prepare standings data in the correct format for save-standings endpoint
-      const standings = teamStandings.map(team => ({
-        team_id: team.team_id,
-        rank: team.rank || 1,
-        disqualified: team.disqualified || false
-      }))
+        // Prepare standings data in the correct format for save-standings endpoint
+        const standings = teamStandings.map(team => ({
+          team_id: team.team_id,
+          rank: team.rank || 1,
+          disqualified: team.disqualified || false
+        }))
 
-      // Use the save-standings endpoint which properly handles points
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events/${eventId}/save-standings`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ standings })
-      })
+        // Use the save-standings endpoint which properly handles points
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events/${eventId}/save-standings`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ standings })
+        })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to save standings')
-      }
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to save standings')
+        }
 
-      toast({
-        title: "Success",
-        description: "Event completed and team standings saved successfully",
-      })
+        toast({
+          title: "Success",
+          description: "Event completed and team standings saved successfully",
+        })
 
-      onComplete()
-      onClose()
+        onComplete()
+        onClose()
+      }, "save individual event standings")
     } catch (error) {
       console.error('Error saving standings:', error)
       toast({

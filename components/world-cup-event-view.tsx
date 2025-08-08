@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast'
 import { Trophy } from 'lucide-react'
 import Link from 'next/link'
+import { useRefModeGuard } from "@/hooks/use-ref-mode-guard"
+import { useRefMode } from "@/components/ref-mode-context"
 
 interface WorldCupEventViewProps {
     event: any
@@ -74,6 +76,8 @@ export function WorldCupEventView({ event, eventId }: WorldCupEventViewProps) {
     const [resetDialogOpen, setResetDialogOpen] = useState(false)
     const [resetting, setResetting] = useState(false)
     const { toast } = useToast()
+    const { guardRefModeAsync } = useRefModeGuard()
+    const { isRefMode } = useRefMode()
 
     useEffect(() => {
         fetchWorldCupData()
@@ -102,7 +106,7 @@ export function WorldCupEventView({ event, eventId }: WorldCupEventViewProps) {
     const handleWinnerSelect = async (winnerId: number) => {
         if (!selectedMatch) return
 
-        try {
+        await guardRefModeAsync(async () => {
             const matchType = 'group_id' in selectedMatch ? 'group' : 'knockout'
 
             const response = await fetch(`/api/events/${eventId}/world-cup`, {
@@ -124,9 +128,7 @@ export function WorldCupEventView({ event, eventId }: WorldCupEventViewProps) {
             } else {
                 toast({ title: 'Error', description: data.message || 'Failed to record winner', variant: 'destructive' })
             }
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to record winner', variant: 'destructive' })
-        }
+        }, "record match winner")
     };
 
     const handleFinalizeStandings = async () => {
@@ -154,24 +156,24 @@ export function WorldCupEventView({ event, eventId }: WorldCupEventViewProps) {
         if (!hasUnresolvedTies) {
             setFinalizing(true)
             try {
-                const response = await fetch(`/api/events/${eventId}/world-cup/finalize`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        tieBreakDecisions
+                await guardRefModeAsync(async () => {
+                    const response = await fetch(`/api/events/${eventId}/world-cup/finalize`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            tieBreakDecisions
+                        })
                     })
-                })
 
-                const data = await response.json()
+                    const data = await response.json()
 
-                if (data.success) {
-                    toast({ title: 'Success', description: 'Knockout stage created successfully' })
-                    fetchWorldCupData()
-                } else {
-                    toast({ title: 'Error', description: data.message || 'Failed to create knockout stage', variant: 'destructive' })
-                }
-            } catch (error) {
-                toast({ title: 'Error', description: 'Failed to create knockout stage', variant: 'destructive' })
+                    if (data.success) {
+                        toast({ title: 'Success', description: 'Knockout stage created successfully' })
+                        fetchWorldCupData()
+                    } else {
+                        toast({ title: 'Error', description: data.message || 'Failed to create knockout stage', variant: 'destructive' })
+                    }
+                }, "finalize tournament standings")
             } finally {
                 setFinalizing(false)
             }
@@ -181,21 +183,21 @@ export function WorldCupEventView({ event, eventId }: WorldCupEventViewProps) {
     const handleCalculateStandings = async () => {
         setCalculatingStandings(true)
         try {
-            const response = await fetch(`/api/events/${eventId}/world-cup/calculate-standings`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            })
+            await guardRefModeAsync(async () => {
+                const response = await fetch(`/api/events/${eventId}/world-cup/calculate-standings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                })
 
-            const data = await response.json()
+                const data = await response.json()
 
-            if (data.success) {
-                toast({ title: 'Success', description: 'Final standings calculated successfully' })
-                setTournamentFinalStandings(data.standings)
-            } else {
-                toast({ title: 'Error', description: data.message || 'Failed to calculate standings', variant: 'destructive' })
-            }
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to calculate standings', variant: 'destructive' })
+                if (data.success) {
+                    toast({ title: 'Success', description: 'Final standings calculated successfully' })
+                    setTournamentFinalStandings(data.standings)
+                } else {
+                    toast({ title: 'Error', description: data.message || 'Failed to calculate standings', variant: 'destructive' })
+                }
+            }, "calculate final standings")
         } finally {
             setCalculatingStandings(false)
         }
@@ -204,23 +206,23 @@ export function WorldCupEventView({ event, eventId }: WorldCupEventViewProps) {
     const handleResetEvent = async () => {
         setResetting(true)
         try {
-            const response = await fetch(`/api/events/${eventId}/world-cup/reset`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            })
+            await guardRefModeAsync(async () => {
+                const response = await fetch(`/api/events/${eventId}/world-cup/reset`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                })
 
-            const data = await response.json()
+                const data = await response.json()
 
-            if (data.success) {
-                toast({ title: 'Success', description: 'Tournament reset successfully' })
-                setTournamentFinalStandings([])
-                setResetDialogOpen(false)
-                fetchWorldCupData()
-            } else {
-                toast({ title: 'Error', description: data.message || 'Failed to reset tournament', variant: 'destructive' })
-            }
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to reset tournament', variant: 'destructive' })
+                if (data.success) {
+                    toast({ title: 'Success', description: 'Tournament reset successfully' })
+                    setTournamentFinalStandings([])
+                    setResetDialogOpen(false)
+                    fetchWorldCupData()
+                } else {
+                    toast({ title: 'Error', description: data.message || 'Failed to reset tournament', variant: 'destructive' })
+                }
+            }, "reset tournament")
         } finally {
             setResetting(false)
         }
@@ -468,14 +470,16 @@ export function WorldCupEventView({ event, eventId }: WorldCupEventViewProps) {
                                     <Trophy className="h-5 w-5" />
                                     Final Tournament Standings
                                 </div>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setResetDialogOpen(true)}
-                                    className="text-red-600 border-red-200 hover:bg-red-50"
-                                >
-                                    Reset Tournament
-                                </Button>
+                                {isRefMode && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setResetDialogOpen(true)}
+                                        className="text-red-600 border-red-200 hover:bg-red-50"
+                                    >
+                                        Reset Tournament
+                                    </Button>
+                                )}
                             </CardTitle>
                         </CardHeader>
                         <CardContent>

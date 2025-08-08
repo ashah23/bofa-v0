@@ -5,6 +5,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { TeamTimer } from './team-timer'
+import { useRefModeGuard } from "@/hooks/use-ref-mode-guard"
+import { useRefMode } from "@/components/ref-mode-context"
 
 // Fixed colors for each team position
 const TEAM_COLORS = [
@@ -38,6 +40,8 @@ export function HeatCard({ heat, onStartHeat, onCompleteHeat }: HeatCardProps) {
     const [isRunning, setIsRunning] = useState(false)
     const [startTime, setStartTime] = useState<number | null>(null)
     const [stoppedTeams, setStoppedTeams] = useState<Set<string>>(new Set())
+    const { guardRefMode } = useRefModeGuard()
+    const { isRefMode } = useRefMode()
 
     const getTeamColor = (teamIndex: number) => {
         return TEAM_COLORS[teamIndex] || TEAM_COLORS[0]
@@ -58,18 +62,20 @@ export function HeatCard({ heat, onStartHeat, onCompleteHeat }: HeatCardProps) {
     }
 
     const handleComplete = () => {
-        // Convert team times to the format expected by the API
-        const formattedTimes: { [key: string]: number } = {}
-        if (heat.team1_name && teamTimes[heat.team1_name]) formattedTimes.team1_name = teamTimes[heat.team1_name]
-        if (heat.team2_name && teamTimes[heat.team2_name]) formattedTimes.team2_name = teamTimes[heat.team2_name]
-        if (heat.team3_name && teamTimes[heat.team3_name]) formattedTimes.team3_name = teamTimes[heat.team3_name]
-        if (heat.team4_name && teamTimes[heat.team4_name]) formattedTimes.team4_name = teamTimes[heat.team4_name]
+        guardRefMode(() => {
+            // Convert team times to the format expected by the API
+            const formattedTimes: { [key: string]: number } = {}
+            if (heat.team1_name && teamTimes[heat.team1_name]) formattedTimes.team1_name = teamTimes[heat.team1_name]
+            if (heat.team2_name && teamTimes[heat.team2_name]) formattedTimes.team2_name = teamTimes[heat.team2_name]
+            if (heat.team3_name && teamTimes[heat.team3_name]) formattedTimes.team3_name = teamTimes[heat.team3_name]
+            if (heat.team4_name && teamTimes[heat.team4_name]) formattedTimes.team4_name = teamTimes[heat.team4_name]
 
-        onCompleteHeat(heat.heat_id, formattedTimes)
-        setShowTimers(false)
-        setIsRunning(false)
-        setStartTime(null)
-        setStoppedTeams(new Set())
+            onCompleteHeat(heat.heat_id, formattedTimes)
+            setShowTimers(false)
+            setIsRunning(false)
+            setStartTime(null)
+            setStoppedTeams(new Set())
+        }, "complete heat")
     }
 
     const allTeamsHaveTimes = () => {
@@ -90,13 +96,15 @@ export function HeatCard({ heat, onStartHeat, onCompleteHeat }: HeatCardProps) {
                     <div className="flex justify-between items-center">
                         <div className="font-medium">Heat {heat.heat_number}</div>
                         <div className="flex items-center gap-2">
-                            {heat.heat_status === 'SCHEDULED' && (
+                            {heat.heat_status === 'SCHEDULED' && isRefMode && (
                                 <Button
                                     variant="default"
                                     size="sm"
                                     onClick={() => {
-                                        onStartHeat(heat.heat_id)
-                                        setShowTimers(true)
+                                        guardRefMode(() => {
+                                            onStartHeat(heat.heat_id)
+                                            setShowTimers(true)
+                                        }, "start heat")
                                     }}
                                 >
                                     Start Heat

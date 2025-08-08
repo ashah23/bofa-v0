@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Edit3 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useRefModeGuard } from "@/hooks/use-ref-mode-guard"
 
 interface Player {
   player_id: number
@@ -35,6 +36,7 @@ export function EditScoreModal({ isOpen, onClose, player, eventId, onSave }: Edi
   })
   const [saving, setSaving] = useState(false)
   const { toast } = useToast()
+  const { guardRefModeAsync } = useRefModeGuard()
 
   useEffect(() => {
     if (player) {
@@ -50,38 +52,33 @@ export function EditScoreModal({ isOpen, onClose, player, eventId, onSave }: Edi
     if (!player) return
 
     try {
-      setSaving(true)
-      const response = await fetch(`/api/events/${eventId}/individual-scores`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          playerId: player.player_id,
-          twos: scores.twos,
-          fives: scores.fives,
-          tens: scores.tens
+      await guardRefModeAsync(async () => {
+        setSaving(true)
+        const response = await fetch(`/api/events/${eventId}/individual-scores`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            playerId: player.player_id,
+            twos: scores.twos,
+            fives: scores.fives,
+            tens: scores.tens
+          })
         })
-      })
 
-      if (!response.ok) {
-        throw new Error('Failed to update score')
-      }
+        if (!response.ok) {
+          throw new Error('Failed to update score')
+        }
 
-      toast({
-        title: 'Success',
-        description: 'Score updated successfully'
-      })
-      
-      onSave()
-      onClose()
-    } catch (error) {
-      console.error('Error updating score:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to update score',
-        variant: 'destructive'
-      })
+        toast({
+          title: 'Success',
+          description: 'Score updated successfully'
+        })
+        
+        onSave()
+        onClose()
+      }, "update player score")
     } finally {
       setSaving(false)
     }

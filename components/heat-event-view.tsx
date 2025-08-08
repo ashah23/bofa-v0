@@ -8,6 +8,8 @@ import { startHeat, completeHeat, resetHeatEvent } from "@/app/events/[eventId]/
 import { StandingsReviewModal } from "@/components/standings-review-modal"
 import { useState } from "react"
 import Link from "next/link"
+import { useRefModeGuard } from "@/hooks/use-ref-mode-guard"
+import { useRefMode } from "@/components/ref-mode-context"
 
 interface HeatEventViewProps {
   event: any
@@ -19,6 +21,8 @@ interface HeatEventViewProps {
 export function HeatEventView({ event, heatMatches, standings, eventId }: HeatEventViewProps) {
   const allHeatsCompleted = heatMatches?.every((match: any) => match.heat_status === 'COMPLETED')
   const [showStandingsModal, setShowStandingsModal] = useState(false)
+  const { guardRefModeAsync } = useRefModeGuard()
+  const { isRefMode } = useRefMode()
 
   return (
     <>
@@ -30,7 +34,7 @@ export function HeatEventView({ event, heatMatches, standings, eventId }: HeatEv
               <CardDescription>Heat-based Event</CardDescription>
             </div>
             <div className="flex gap-4">
-              {allHeatsCompleted && event.event_status !== 'COMPLETED' && (
+              {allHeatsCompleted && event.event_status !== 'COMPLETED' && isRefMode && (
                 <Button
                   onClick={() => setShowStandingsModal(true)}
                   variant="default"
@@ -38,14 +42,12 @@ export function HeatEventView({ event, heatMatches, standings, eventId }: HeatEv
                   Complete Event & Calculate Standings
                 </Button>
               )}
-              {event.event_status === 'COMPLETED' && (
+              {event.event_status === 'COMPLETED' && isRefMode && (
                 <Button
                   onClick={async () => {
-                    try {
+                    await guardRefModeAsync(async () => {
                       await resetHeatEvent(eventId)
-                    } catch (error) {
-                      console.error('Error resetting event:', error)
-                    }
+                    }, "reset event")
                   }}
                   variant="destructive"
                 >

@@ -4,19 +4,18 @@ import type React from "react"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import Link from "next/link"
-import { Beer } from "lucide-react"
+import { Beer, Shield } from "lucide-react"
 import { UserNav } from "@/components/user-nav"
 import { type User, currentUser, setCurrentUser } from "@/lib/data"
 import { useState, useEffect } from "react"
+import { RefModeProvider, useRefMode } from "@/components/ref-mode-context"
+import { Badge } from "@/components/ui/badge"
 
 const inter = Inter({ subsets: ["latin"] })
 
-export default function ClientLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
+function HeaderContent() {
   const [user, setUser] = useState<User | null>(null)
+  const { isRefMode } = useRefMode()
 
   useEffect(() => {
     // In a real app, this would check for an authenticated session
@@ -29,34 +28,54 @@ export default function ClientLayout({
   }
 
   return (
+    <header className="border-b">
+      <div className="container mx-auto px-4 py-3 md:py-4">
+        <nav className="flex items-center justify-between">
+          <Link href="/" className="flex items-center space-x-2">
+            <Beer className="h-5 w-5 md:h-6 md:w-6 text-amber-600" />
+            <span className="text-lg md:text-xl font-bold">Beer Olympics</span>
+          </Link>
+          <div className="flex items-center space-x-4 md:space-x-6">
+            <Link href="/standings" className="text-xs md:text-sm font-medium hover:underline">
+              Standings
+            </Link>
+            <Link href="/events" className="text-xs md:text-sm font-medium hover:underline">
+              Events
+            </Link>
+            <Link href="/teams" className="text-xs md:text-sm font-medium hover:underline">
+              Teams
+            </Link>
+            {isRefMode && (
+              <Link href="/extra-points" className="text-xs md:text-sm font-medium hover:underline">
+                Extra Points
+              </Link>
+            )}
+            {isRefMode && (
+              <Badge variant="default" className="bg-green-600 hover:bg-green-700">
+                <Shield className="h-3 w-3 mr-1" />
+                Ref Mode
+              </Badge>
+            )}
+            <UserNav user={user} onLogin={handleLogin} />
+          </div>
+        </nav>
+      </div>
+    </header>
+  )
+}
+
+export default function ClientLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode
+}>) {
+  return (
     <html lang="en">
       <body className={inter.className}>
-        <header className="border-b">
-          <div className="container mx-auto px-4 py-3 md:py-4">
-            <nav className="flex items-center justify-between">
-              <Link href="/" className="flex items-center space-x-2">
-                <Beer className="h-5 w-5 md:h-6 md:w-6 text-amber-600" />
-                <span className="text-lg md:text-xl font-bold">Beer Olympics</span>
-              </Link>
-              <div className="flex items-center space-x-4 md:space-x-6">
-                <Link href="/standings" className="text-xs md:text-sm font-medium hover:underline">
-                  Standings
-                </Link>
-                <Link href="/events" className="text-xs md:text-sm font-medium hover:underline">
-                  Events
-                </Link>
-                <Link href="/teams" className="text-xs md:text-sm font-medium hover:underline">
-                  Teams
-                </Link>
-                <Link href="/extra-points" className="text-xs md:text-sm font-medium hover:underline">
-                  Extra Points
-                </Link>
-                <UserNav user={user} onLogin={handleLogin} />
-              </div>
-            </nav>
-          </div>
-        </header>
-        <main>{children}</main>
+        <RefModeProvider>
+          <HeaderContent />
+          <main>{children}</main>
+        </RefModeProvider>
       </body>
     </html>
   )
