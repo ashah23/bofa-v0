@@ -229,7 +229,7 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
           <p className="text-muted-foreground">Individual Event - Slam Dunk Challenge</p>
         </div>
         <div className="flex items-center gap-4">
-          {event.event_status !== 'COMPLETED' && (
+          {event.event_status !== 'COMPLETED' && isRefMode && (
             <Button
               onClick={() => setShowStandingsModal(true)}
               variant="default"
@@ -476,7 +476,7 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
                     <TableHead className="text-center">5-Pointers</TableHead>
                     <TableHead className="text-center">10-Pointers</TableHead>
                     <TableHead className="text-center">Total Points</TableHead>
-                    <TableHead className="text-center">Actions</TableHead>
+                    {isRefMode && <TableHead className="text-center">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -492,16 +492,18 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
                       <TableCell className="text-center">{player.fives}</TableCell>
                       <TableCell className="text-center">{player.tens}</TableCell>
                       <TableCell className="text-center font-bold">{player.total_points}</TableCell>
-                      <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEdit(player)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Edit3 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+                      {isRefMode && (
+                        <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEdit(player)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>

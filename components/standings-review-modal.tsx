@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ChevronUp, ChevronDown, Clock, Trophy, Medal, Award, XCircle } from "lucide-react"
+import { Clock, Trophy, Medal, Award, XCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useRefModeGuard } from "@/hooks/use-ref-mode-guard"
 
@@ -59,30 +59,6 @@ export function StandingsReviewModal({ isOpen, onClose, eventId, onComplete }: S
     } finally {
       setLoading(false)
     }
-  }
-
-  const moveTeam = (fromIndex: number, direction: 'up' | 'down') => {
-    if (direction === 'up' && fromIndex === 0) return
-    if (direction === 'down' && fromIndex === standings.length - 1) return
-
-    const newStandings = [...standings]
-    const toIndex = direction === 'up' ? fromIndex - 1 : fromIndex + 1
-
-    // Swap the teams
-    const temp = newStandings[fromIndex]
-    newStandings[fromIndex] = newStandings[toIndex]
-    newStandings[toIndex] = temp
-
-    // Update ranks (excluding disqualified teams)
-    let currentRank = 1
-    newStandings.forEach((standing) => {
-      if (!standing.disqualified) {
-        standing.rank = currentRank
-        currentRank++
-      }
-    })
-
-    setStandings(newStandings)
   }
 
   const toggleDisqualification = (teamId: number) => {
@@ -191,7 +167,7 @@ export function StandingsReviewModal({ isOpen, onClose, eventId, onComplete }: S
             Review Final Standings
           </DialogTitle>
           <DialogDescription>
-            Review and adjust team rankings based on completion times. You can manually reorder teams if needed.
+            Review team rankings based on completion times. Rankings are automatically determined by finish times. You can only disqualify teams if needed.
           </DialogDescription>
         </DialogHeader>
 
@@ -226,28 +202,6 @@ export function StandingsReviewModal({ isOpen, onClose, eventId, onComplete }: S
                       </div>
                       
                       <div className="flex items-center gap-1">
-                        {!standing.disqualified && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => moveTeam(index, 'up')}
-                              disabled={index === 0}
-                              className="h-8 w-8 p-0"
-                            >
-                              <ChevronUp className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => moveTeam(index, 'down')}
-                              disabled={index === standings.length - 1}
-                              className="h-8 w-8 p-0"
-                            >
-                              <ChevronDown className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
                         <Button
                           size="sm"
                           variant={standing.disqualified ? "default" : "outline"}
