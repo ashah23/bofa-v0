@@ -196,31 +196,14 @@ export async function POST(
     }
     const match = matchRes.rows[0];
 
-    // Special handling for Finals Round 0: if team2 wins, create Finals Round 1
+    // Special handling for Finals Round 1: if team2 wins, unhide Finals Round 2
     if (match.bracket === 'Final' && match.round === 1 && winnerId === match.team2_id) {
-      // Create Finals Round 1 match with both teams
-      const nextMatchId = await client.query(
-        `SELECT COALESCE(MAX(match_id), 0) + 1 as next_id FROM double_elim_matches WHERE event_id = $1`,
-        [eventId]
-      );
-      
+      // Unhide Finals Round 2 match and assign teams
       await client.query(
-        `INSERT INTO double_elim_matches (match_id, event_id, round, match_number, bracket, team1_id, team2_id, next_match_win_id, next_match_win_slot, next_match_lose_id, next_match_lose_slot, is_hidden)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-        [
-          nextMatchId.rows[0].next_id, // match_id
-          eventId,                     // event_id
-          2,                           // round (Finals Round 2)
-          1,                           // match_number
-          'Final',                     // bracket
-          loserId,                     // team1_id (the team that lost Finals Round 1)
-          winnerId,                    // team2_id (the team that won Finals Round 1)
-          null,                        // next_match_win_id (no next match)
-          null,                        // next_match_win_slot
-          null,                        // next_match_lose_id
-          null,                        // next_match_lose_slot
-          false                        // is_hidden (make it visible)
-        ]
+        `UPDATE double_elim_matches 
+         SET is_hidden = false, team1_id = $1, team2_id = $2
+         WHERE event_id = $3 AND bracket = 'Final' AND round = 2`,
+        [loserId, winnerId, eventId]
       );
     }
 

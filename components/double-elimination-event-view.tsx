@@ -91,6 +91,7 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
   const [showResetPasscodeDialog, setShowResetPasscodeDialog] = useState(false)
   const [updatingMatch, setUpdatingMatch] = useState(false)
   const [currentTab, setCurrentTab] = useState("bracket")
+  const [eventStandings, setEventStandings] = useState<any[]>([])
   const { toast } = useToast()
   const { guardRefModeAsync } = useRefModeGuard()
   const { isRefMode } = useRefMode()
@@ -99,18 +100,41 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
     try {
       setLoading(true)
       const response = await fetch(`/api/events/${eventId}/double-elimination-matches`)
-      const result = await response.json()
-
-      if (result.success) {
-        setData(result)
-      } else {
-        setError(result.error || 'Failed to fetch tournament data')
+      if (!response.ok) {
+        throw new Error('Failed to fetch double elimination data')
       }
-    } catch (err) {
-      setError('Failed to fetch tournament data')
-      console.error('Error fetching double elimination data:', err)
+      const result = await response.json()
+      setData(result)
+
+      // Fetch event standings if event is completed
+      if (event.event_status === 'COMPLETED') {
+        const eventStandingsData = await fetchEventStandings()
+        setEventStandings(eventStandingsData)
+      }
+    } catch (error) {
+      console.error('Error fetching double elimination data:', error)
+      setError('Failed to load tournament data')
+      toast({
+        title: 'Error',
+        description: 'Failed to load tournament data',
+        variant: 'destructive'
+      })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchEventStandings = async (): Promise<any[]> => {
+    try {
+      const response = await fetch(`/api/events/${eventId}/standings`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch event standings')
+      }
+      const result = await response.json()
+      return result.standings || []
+    } catch (error) {
+      console.error('Error fetching event standings:', error)
+      return []
     }
   }
 
@@ -216,6 +240,202 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
     } finally {
       setResettingBracket(false)
     }
+  }
+
+  const completeEvent = async () => {
+    try {
+      await guardRefModeAsync(async () => {
+        // Calculate standings based on match results
+        const standings = calculateFinalStandings()
+        
+        const response = await fetch(`/api/events/${eventId}/complete`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ standings })
+        })
+
+        const result = await response.json()
+
+        if (result.success) {
+          toast({
+            title: "Success",
+            description: 'Tournament completed successfully!',
+            variant: "default"
+          })
+          // Refresh the data to show standings
+          await fetchData()
+          // Switch to standings tab
+          setCurrentTab("standings")
+        } else {
+          toast({
+            title: "Error",
+            description: 'Failed to complete tournament: ' + result.error,
+            variant: "destructive"
+          })
+        }
+      }, "complete event")
+    } catch (error) {
+      console.error('Error completing event:', error)
+      toast({
+        title: "Error",
+        description: 'Failed to complete tournament: ' + (error instanceof Error ? error.message : 'Unknown error'),
+        variant: "destructive"
+      })
+    }
+  }
+
+  const calculateFinalStandings = () => {
+    if (!data) return []
+
+    const standings: Array<{ rank: number; teamId: number; teamName: string }> = []
+    
+    // Get all matches for reference
+    const allMatches = [
+      ...(data.matches.winner || []),
+      ...(data.matches.loser || []),
+      ...(data.matches.final || []),
+      ...(data.matches['9-12'] || []),
+      ...(data.matches['7-8'] || []),
+      ...(data.matches['5-6'] || []),
+      ...(data.matches['11-12'] || []),
+      ...(data.matches['9-10'] || [])
+    ]
+
+    // Helper function to get match by ID
+    const getMatch = (matchId: number) => allMatches.find(m => m.match_id === matchId)
+    
+    // Helper function to get team name by ID
+    const getTeamName = (teamId: number) => {
+      const match = allMatches.find(m => m.team1_id === teamId || m.team2_id === teamId)
+      if (match?.team1_id === teamId) return match.team1_name || `Team ${teamId}`
+      if (match?.team2_id === teamId) return match.team2_name || `Team ${teamId}`
+      return `Team ${teamId}`
+    }
+
+    // Determine which final match was the last one played
+    const finalMatch28 = getMatch(28)
+    const finalMatch29 = getMatch(29)
+    
+    let championId: number | null = null
+    let runnerUpId: number | null = null
+
+    if (finalsRound2Visible && finalMatch29?.winner_id) {
+      // Finals Round 2 was played - winner is champion, loser is runner-up
+      championId = finalMatch29.winner_id
+      runnerUpId = finalMatch29.loser_id
+    } else if (finalMatch28?.winner_id) {
+      // Only Finals Round 1 was played - winner is champion, loser is runner-up
+      championId = finalMatch28.winner_id
+      runnerUpId = finalMatch28.loser_id
+    }
+
+    if (championId) {
+      standings.push({
+        rank: 1,
+        teamId: championId,
+        teamName: getTeamName(championId)
+      })
+    }
+
+    if (runnerUpId) {
+      standings.push({
+        rank: 2,
+        teamId: runnerUpId,
+        teamName: getTeamName(runnerUpId)
+      })
+    }
+
+    // Add remaining teams based on specific match results
+    const match21 = getMatch(21) // L21
+    const match20 = getMatch(20) // L20
+    const match27 = getMatch(27) // W27, L27
+    const match26 = getMatch(26) // W26, L26
+    const match25 = getMatch(25) // W25, L25
+    const match24 = getMatch(24) // W24, L24
+
+    if (match21?.loser_id) {
+      standings.push({
+        rank: 3,
+        teamId: match21.loser_id,
+        teamName: getTeamName(match21.loser_id)
+      })
+    }
+
+    if (match20?.loser_id) {
+      standings.push({
+        rank: 4,
+        teamId: match20.loser_id,
+        teamName: getTeamName(match20.loser_id)
+      })
+    }
+
+    if (match27?.winner_id) {
+      standings.push({
+        rank: 5,
+        teamId: match27.winner_id,
+        teamName: getTeamName(match27.winner_id)
+      })
+    }
+
+    if (match27?.loser_id) {
+      standings.push({
+        rank: 6,
+        teamId: match27.loser_id,
+        teamName: getTeamName(match27.loser_id)
+      })
+    }
+
+    if (match26?.winner_id) {
+      standings.push({
+        rank: 7,
+        teamId: match26.winner_id,
+        teamName: getTeamName(match26.winner_id)
+      })
+    }
+
+    if (match26?.loser_id) {
+      standings.push({
+        rank: 8,
+        teamId: match26.loser_id,
+        teamName: getTeamName(match26.loser_id)
+      })
+    }
+
+    if (match25?.winner_id) {
+      standings.push({
+        rank: 9,
+        teamId: match25.winner_id,
+        teamName: getTeamName(match25.winner_id)
+      })
+    }
+
+    if (match25?.loser_id) {
+      standings.push({
+        rank: 10,
+        teamId: match25.loser_id,
+        teamName: getTeamName(match25.loser_id)
+      })
+    }
+
+    if (match24?.winner_id) {
+      standings.push({
+        rank: 11,
+        teamId: match24.winner_id,
+        teamName: getTeamName(match24.winner_id)
+      })
+    }
+
+    if (match24?.loser_id) {
+      standings.push({
+        rank: 12,
+        teamId: match24.loser_id,
+        teamName: getTeamName(match24.loser_id)
+      })
+    }
+
+    return standings
   }
 
   const getBracketName = (bracket: string) => {
@@ -336,6 +556,14 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
 
   const sortedMatches = sortMatchesByPlayOrder(allMatches)
 
+  // Check if all visible matches are completed
+  const visibleMatches = allMatches.filter(match => !match.is_hidden)
+  const completedVisibleMatches = visibleMatches.filter(match => match.winner_id)
+  const allVisibleMatchesCompleted = visibleMatches.length > 0 && completedVisibleMatches.length === visibleMatches.length
+
+  // Check if Finals Round 2 is visible (meaning Finals Round 1 was won by team2)
+  const finalsRound2Visible = data?.matches.final?.some(match => match.round === 2 && !match.is_hidden) || false
+
   return (
     <div className="space-y-6">
       {/* Event Header */}
@@ -399,17 +627,152 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
       </Card>
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="bracket" className="w-full" value={currentTab} onValueChange={setCurrentTab}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="bracket" className="flex items-center gap-2">
-            <Eye className="h-4 w-4" />
-            Bracket View
-          </TabsTrigger>
-          <TabsTrigger value="matches" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            Manage Matches
-          </TabsTrigger>
+      <Tabs defaultValue={event.event_status === 'COMPLETED' ? "standings" : "bracket"} className="w-full" value={currentTab} onValueChange={setCurrentTab}>
+        <TabsList className={`grid w-full ${event.event_status === 'COMPLETED' ? 'grid-cols-2' : 'grid-cols-2'}`}>
+          {event.event_status === 'COMPLETED' ? (
+            <>
+              <TabsTrigger value="standings" className="flex items-center gap-2">
+                <Trophy className="h-4 w-4" />
+                Final Standings
+              </TabsTrigger>
+              <TabsTrigger value="bracket" className="flex items-center gap-2">
+                <Eye className="h-4 w-4" />
+                Tournament Bracket
+              </TabsTrigger>
+            </>
+          ) : (
+            <>
+              <TabsTrigger value="bracket" className="flex items-center gap-2">
+                <Eye className="h-4 w-4" />
+                Bracket View
+              </TabsTrigger>
+              <TabsTrigger value="matches" className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Manage Matches
+              </TabsTrigger>
+            </>
+          )}
         </TabsList>
+
+        {/* Final Standings Tab (only shown when completed) */}
+        {event.event_status === 'COMPLETED' && (
+          <TabsContent value="standings" className="space-y-4">
+            <div className="space-y-8">
+              {/* Olympic Podium */}
+              <div className="mb-8">
+                <div className="relative h-[200px] w-full max-w-4xl mx-auto">
+                  {/* Podium Base */}
+                  <div className="absolute bottom-0 left-0 right-0 h-[200px] bg-gray-100 rounded-t-2xl" />
+
+                  {/* Podium Steps */}
+                  <div className="absolute bottom-0 left-0 right-0 h-[200px] flex justify-center items-end gap-4 px-8">
+                    {/* 2nd Place */}
+                    <div className="w-1/3 h-[160px] bg-gray-200 rounded-t-xl flex flex-col items-center justify-center relative">
+                      <Award className="h-10 w-10 text-gray-400 mb-2" />
+                      <Link
+                        href={`/teams/${eventStandings[1]?.team_id}`}
+                        className="font-bold text-gray-600 hover:text-gray-800 hover:underline transition-colors"
+                      >
+                        {eventStandings[1]?.team_name}
+                      </Link>
+                      <span className="text-sm text-gray-500">{eventStandings[1]?.point_value} pts</span>
+                      <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-gray-200 px-4 py-1 rounded-full">
+                        <span className="font-bold text-gray-600">2nd</span>
+                      </div>
+                    </div>
+
+                    {/* 1st Place */}
+                    <div className="w-1/3 h-[200px] bg-yellow-100 rounded-t-xl flex flex-col items-center justify-center relative">
+                      <Trophy className="h-12 w-12 text-yellow-500 mb-2" />
+                      <Link
+                        href={`/teams/${eventStandings[0]?.team_id}`}
+                        className="font-bold text-yellow-600 hover:text-yellow-800 hover:underline transition-colors"
+                      >
+                        {eventStandings[0]?.team_name}
+                      </Link>
+                      <span className="text-sm text-yellow-500">{eventStandings[0]?.point_value} pts</span>
+                      <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-yellow-100 px-4 py-1 rounded-full">
+                        <span className="font-bold text-yellow-600">1st</span>
+                      </div>
+                    </div>
+
+                    {/* 3rd Place */}
+                    <div className="w-1/3 h-[120px] bg-amber-100 rounded-t-xl flex flex-col items-center justify-center relative">
+                      <Award className="h-8 w-8 text-amber-700 mb-2" />
+                      <Link
+                        href={`/teams/${eventStandings[2]?.team_id}`}
+                        className="font-bold text-amber-700 hover:text-amber-900 hover:underline transition-colors"
+                      >
+                        {eventStandings[2]?.team_name}
+                      </Link>
+                      <span className="text-sm text-amber-600">{eventStandings[2]?.point_value} pts</span>
+                      <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-amber-100 px-4 py-1 rounded-full">
+                        <span className="font-bold text-amber-700">3rd</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Final Standings Table */}
+              {eventStandings.length > 3 && (
+                <div className="rounded-md border">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="h-12 px-4 text-left align-middle font-medium">Rank</th>
+                        <th className="h-12 px-4 text-left align-middle font-medium">Team</th>
+                        <th className="h-12 px-4 text-right align-middle font-medium">Points</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {eventStandings.slice(3).map((standing: any) => (
+                        <tr key={standing.team_id} className={`border-b transition-colors hover:bg-muted/50 ${standing.disqualified ? 'bg-red-50' : ''}`}>
+                          <td className="p-4 align-middle">
+                            {standing.disqualified ? (
+                              <span className="text-red-600 font-bold">DQ</span>
+                            ) : (
+                              standing.rank
+                            )}
+                          </td>
+                          <td className={`p-4 align-middle font-medium ${standing.disqualified ? 'text-red-600 line-through' : ''}`}>
+                            <Link
+                              href={`/teams/${standing.team_id}`}
+                              className="hover:text-primary hover:underline transition-colors"
+                            >
+                              {standing.team_name}
+                            </Link>
+                          </td>
+                          <td className="p-4 align-middle text-right">{standing.point_value}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Reset Event Button (only shown when completed) */}
+              {isRefMode && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Tournament Management</CardTitle>
+                    <CardDescription>Advanced tournament controls</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button
+                      variant="destructive"
+                      disabled={resettingBracket}
+                      onClick={() => setShowResetPasscodeDialog(true)}
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      {resettingBracket ? 'Resetting...' : 'Reset Entire Tournament'}
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+        )}
 
         <TabsContent value="bracket" className="mt-6">
           <Card>
@@ -652,6 +1015,26 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
                   >
                     <RefreshCw className="h-4 w-4 mr-2" />
                     {resettingBracket ? 'Resetting...' : 'Reset Entire Bracket'}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Complete Event */}
+            {isRefMode && allVisibleMatchesCompleted && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Complete Tournament</CardTitle>
+                  <CardDescription>Finalize the tournament and calculate final standings</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    variant="default"
+                    className="bg-green-600 hover:bg-green-700"
+                    onClick={() => completeEvent()}
+                  >
+                    <Trophy className="h-4 w-4 mr-2" />
+                    Complete Event & Calculate Standings
                   </Button>
                 </CardContent>
               </Card>
