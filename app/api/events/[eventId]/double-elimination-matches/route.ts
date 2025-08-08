@@ -29,6 +29,7 @@ export async function GET(
         m.next_match_lose_id,
         m.next_match_lose_slot,
         m.played_at,
+        m.is_hidden,
         t1.team_name AS team1_name,
         t2.team_name AS team2_name,
         tw.team_name AS winner_name,
@@ -44,18 +45,38 @@ export async function GET(
 
     // Group matches by bracket for easier frontend consumption
     const matches = {
-      winner: res.rows.filter(match => match.bracket === 'W').sort((a, b) => {
+      winner: res.rows.filter(match => match.bracket === 'Winner').sort((a, b) => {
         // Winner's bracket: ascending order (lowest to highest round)
         if (a.round !== b.round) return a.round - b.round;
         return a.match_number - b.match_number;
       }),
-      loser: res.rows.filter(match => match.bracket === 'L').sort((a, b) => {
+      loser: res.rows.filter(match => match.bracket === 'Loser').sort((a, b) => {
         // Loser's bracket: descending order (highest to lowest round, since rounds are negative)
         if (a.round !== b.round) return b.round - a.round;
         return a.match_number - b.match_number;
       }),
-      final: res.rows.filter(match => match.bracket === 'F').sort((a, b) => {
+      final: res.rows.filter(match => match.bracket === 'Final').sort((a, b) => {
         // Finals: ascending order
+        if (a.round !== b.round) return a.round - b.round;
+        return a.match_number - b.match_number;
+      }),
+      '9-12': res.rows.filter(match => match.bracket === '9-12').sort((a, b) => {
+        if (a.round !== b.round) return a.round - b.round;
+        return a.match_number - b.match_number;
+      }),
+      '7-8': res.rows.filter(match => match.bracket === '7-8').sort((a, b) => {
+        if (a.round !== b.round) return a.round - b.round;
+        return a.match_number - b.match_number;
+      }),
+      '5-6': res.rows.filter(match => match.bracket === '5-6').sort((a, b) => {
+        if (a.round !== b.round) return a.round - b.round;
+        return a.match_number - b.match_number;
+      }),
+      '11-12': res.rows.filter(match => match.bracket === '11-12').sort((a, b) => {
+        if (a.round !== b.round) return a.round - b.round;
+        return a.match_number - b.match_number;
+      }),
+      '9-10': res.rows.filter(match => match.bracket === '9-10').sort((a, b) => {
         if (a.round !== b.round) return a.round - b.round;
         return a.match_number - b.match_number;
       })
@@ -161,9 +182,9 @@ export async function POST(
 
     await client.query('BEGIN');
 
-    // Get the next match info for this match
+    // Get the match info
     const matchRes = await client.query(
-      `SELECT next_match_win_id, next_match_win_slot, next_match_lose_id, next_match_lose_slot FROM double_elim_matches WHERE match_id = $1 AND event_id = $2`,
+      `SELECT match_id, bracket, round, next_match_win_id, next_match_win_slot, next_match_lose_id, next_match_lose_slot, team1_id, team2_id FROM double_elim_matches WHERE match_id = $1 AND event_id = $2`,
       [matchId, eventId]
     );
     if (matchRes.rowCount === 0) {
@@ -174,6 +195,34 @@ export async function POST(
       );
     }
     const match = matchRes.rows[0];
+
+    // Special handling for Finals Round 0: if team2 wins, create Finals Round 1
+    if (match.bracket === 'Final' && match.round === 1 && winnerId === match.team2_id) {
+      // Create Finals Round 1 match with both teams
+      const nextMatchId = await client.query(
+        `SELECT COALESCE(MAX(match_id), 0) + 1 as next_id FROM double_elim_matches WHERE event_id = $1`,
+        [eventId]
+      );
+      
+      await client.query(
+        `INSERT INTO double_elim_matches (match_id, event_id, round, match_number, bracket, team1_id, team2_id, next_match_win_id, next_match_win_slot, next_match_lose_id, next_match_lose_slot, is_hidden)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        [
+          nextMatchId.rows[0].next_id, // match_id
+          eventId,                     // event_id
+          2,                           // round (Finals Round 2)
+          1,                           // match_number
+          'Final',                     // bracket
+          loserId,                     // team1_id (the team that lost Finals Round 1)
+          winnerId,                    // team2_id (the team that won Finals Round 1)
+          null,                        // next_match_win_id (no next match)
+          null,                        // next_match_win_slot
+          null,                        // next_match_lose_id
+          null,                        // next_match_lose_slot
+          false                        // is_hidden (make it visible)
+        ]
+      );
+    }
 
     // Update the match with winner and loser
     const result = await client.query(

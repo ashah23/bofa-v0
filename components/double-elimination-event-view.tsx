@@ -36,7 +36,7 @@ interface Match {
   match_id: number
   round: number
   match_number: number
-  bracket: 'W' | 'L' | 'F'
+  bracket: 'Winner' | 'Loser' | 'Final' | '9-12' | '11-12' | '9-10' | '7-8' | '5-6'
   team1_id: number | null
   team2_id: number | null
   winner_id: number | null
@@ -50,6 +50,7 @@ interface Match {
   next_match_win_slot: number | null
   next_match_lose_id: number | null
   next_match_lose_slot: number | null
+  is_hidden: boolean
 }
 
 interface Standing {
@@ -66,6 +67,11 @@ interface DoubleEliminationData {
     winner: Match[]
     loser: Match[]
     final: Match[]
+    '9-12': Match[]
+    '7-8': Match[]
+    '5-6': Match[]
+    '11-12': Match[]
+    '9-10': Match[]
   }
   standings: Standing[]
   eventId: number
@@ -214,9 +220,9 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
 
   const getBracketName = (bracket: string) => {
     switch (bracket) {
-      case 'W': return 'Winner\'s Bracket'
-      case 'L': return 'Loser\'s Bracket'
-      case 'F': return 'Finals'
+      case 'Winner': return 'Winner\'s Bracket'
+      case 'Loser': return 'Loser\'s Bracket'
+      case 'Final': return 'Finals'
       default: return bracket
     }
   }
@@ -234,24 +240,25 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
   const getMatchPriority = (match: Match) => {
     // winners and losers brackets are higher priority than finals
     // round 1 is higher priority than round 2, which is higher than 3, etc
-    const isFinal = match.bracket === 'F' ? 1 : 0
+    const isFinal = match.bracket === 'Final' ? 1 : 0
     const round = Math.abs(match.round)
     return isFinal * 1000 + round * 100 + match.match_number
 
   }
 
   const sortMatchesByPlayOrder = (matches: Match[]) => {
-    return matches.sort((a, b) => {
-      // First, prioritize matches that are ready to play
-      const aReady = a.team1_id && a.team2_id && !a.winner_id
-      const bReady = b.team1_id && b.team2_id && !b.winner_id
+    // Group matches by status
+    const readyMatches = matches.filter(match => match.team1_id && match.team2_id && !match.winner_id)
+    const pendingMatches = matches.filter(match => !match.team1_id || !match.team2_id)
+    const completedMatches = matches.filter(match => match.winner_id)
 
-      if (aReady && !bReady) return -1
-      if (!aReady && bReady) return 1
+    // Sort each group
+    const sortedReadyMatches = readyMatches.sort((a, b) => a.match_id - b.match_id)
+    const sortedPendingMatches = pendingMatches.sort((a, b) => a.match_id - b.match_id)
+    const sortedCompletedMatches = completedMatches.sort((a, b) => b.match_id - a.match_id)
 
-      // Then sort by priority
-      return getMatchPriority(a) - getMatchPriority(b)
-    })
+    // Return in order: Ready, Pending, Completed
+    return [...sortedReadyMatches, ...sortedPendingMatches, ...sortedCompletedMatches]
   }
 
   const getCourtNumber = (matchId: number) => {
@@ -300,16 +307,31 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
 
   const totalMatches = (data?.matches.winner.length || 0) +
     (data?.matches.loser.length || 0) +
-    (data?.matches.final.length || 0)
+    (data?.matches.final.length || 0) +
+    (data?.matches['9-12'].length || 0) +
+    (data?.matches['7-8'].length || 0) +
+    (data?.matches['5-6'].length || 0) +
+    (data?.matches['11-12'].length || 0) +
+    (data?.matches['9-10'].length || 0)
 
   const completedMatches = (data?.matches.winner?.filter(m => m.winner_id).length || 0) +
     (data?.matches.loser?.filter(m => m.winner_id).length || 0) +
-    (data?.matches.final?.filter(m => m.winner_id).length || 0)
+    (data?.matches.final?.filter(m => m.winner_id).length || 0) +
+    (data?.matches['9-12']?.filter(m => m.winner_id).length || 0) +
+    (data?.matches['7-8']?.filter(m => m.winner_id).length || 0) +
+    (data?.matches['5-6']?.filter(m => m.winner_id).length || 0) +
+    (data?.matches['11-12']?.filter(m => m.winner_id).length || 0) +
+    (data?.matches['9-10']?.filter(m => m.winner_id).length || 0)
 
   const allMatches = [
     ...(data?.matches.winner || []),
     ...(data?.matches.loser || []),
-    ...(data?.matches.final || [])
+    ...(data?.matches.final || []),
+    ...(data?.matches['9-12'] || []),
+    ...(data?.matches['7-8'] || []),
+    ...(data?.matches['5-6'] || []),
+    ...(data?.matches['11-12'] || []),
+    ...(data?.matches['9-10'] || [])
   ]
 
   const sortedMatches = sortMatchesByPlayOrder(allMatches)
@@ -590,12 +612,7 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
                                     <AlertDialogHeader>
                                       <AlertDialogTitle>Reset Match</AlertDialogTitle>
                                       <AlertDialogDescription>
-                                        Are you sure you want to reset this match? This will:
-                                        <ul className="list-disc list-inside mt-2">
-                                          <li>Clear the winner and loser</li>
-                                          <li>Remove teams from the next matches</li>
-                                          <li>Allow the match to be replayed</li>
-                                        </ul>
+                                        Are you sure you want to reset this match? This will clear the winner and loser, remove teams from the next matches, and allow the match to be replayed.
                                       </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
