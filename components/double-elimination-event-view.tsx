@@ -254,6 +254,12 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
     })
   }
 
+  const getCourtNumber = (matchId: number) => {
+    // Court number is determined by match ID modulo 3, with 0 becoming 3
+    const court = matchId % 3
+    return court === 0 ? 3 : court
+  }
+
   if (loading) {
     return (
       <Card className="mb-8">
@@ -459,62 +465,77 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
                     const isPlayable = match.team1_id && match.team2_id && !match.winner_id
 
                     return (
-                      <Card key={match.match_id} className="border-l-4 border-l-blue-500">
-                        <CardContent className="p-4 sm:p-6">
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                              <div className="flex items-center gap-2">
-                                {status.icon}
-                                <div>
-                                  <span className="text-sm sm:text-base font-medium">
-                                    {getBracketName(match.bracket)} - Match {match.match_number}
-                                  </span>
-                                  <p className="text-xs text-muted-foreground">
-                                    Round {Math.abs(match.round)}
-                                  </p>
+                      <Card key={match.match_id} className={`border-l-4 ${match.winner_id ? 'border-l-green-500 bg-green-50/30' : 'border-l-blue-500'} hover:shadow-md transition-all duration-200`}>
+                        <CardContent className="p-6">
+                          <div className="space-y-4">
+                            {/* Header with match info and status */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2">
+                                  {status.icon}
+                                  <div>
+                                    <h3 className="font-semibold text-base">
+                                      {getBracketName(match.bracket)} - Match {match.match_number}
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground">
+                                      Round {Math.abs(match.round)} • Court {getCourtNumber(match.match_id)}
+                                    </p>
+                                  </div>
                                 </div>
                               </div>
-                              <div className="text-center sm:text-left">
-                                <p className="text-sm sm:text-base">
-                                  <span className={`font-semibold ${match.team1_name ? 'text-blue-600' : 'text-gray-600'}`}>
-                                    <Link
-                                      href={match.team1_id ? `/teams/${match.team1_id}` : '#'}
-                                      className="hover:text-primary hover:underline transition-colors"
-                                    >
-                                      {match.team1_name || 'TBD'}
-                                    </Link>
-                                  </span>
-                                  <span className="mx-2">vs</span>
-                                  <span className={`font-semibold ${match.team2_name ? 'text-blue-600' : 'text-gray-600'}`}>
-                                    <Link
-                                      href={match.team2_id ? `/teams/${match.team2_id}` : '#'}
-                                      className="hover:text-primary hover:underline transition-colors"
-                                    >
-                                      {match.team2_name || 'TBD'}
-                                    </Link>
-                                  </span>
-                                </p>
-                                {match.winner_name && (
-                                  <p className="text-xs text-green-600 mt-1">
-                                    Winner:
+                              {match.winner_name && (
+                                <Badge variant="default" className="bg-green-600 hover:bg-green-700">
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Completed
+                                </Badge>
+                              )}
+                            </div>
+
+                            {/* Teams section */}
+                            <div className="bg-white rounded-lg p-4 border">
+                              <div className="flex items-center justify-center gap-4">
+                                <div className="flex-1 text-center">
+                                  <Link
+                                    href={match.team1_id ? `/teams/${match.team1_id}` : '#'}
+                                    className={`text-lg font-semibold hover:text-primary hover:underline transition-colors ${match.team1_name ? 'text-blue-600' : 'text-gray-500'}`}
+                                  >
+                                    {match.team1_name || 'TBD'}
+                                  </Link>
+                                </div>
+                                <div className="text-muted-foreground font-medium">vs</div>
+                                <div className="flex-1 text-center">
+                                  <Link
+                                    href={match.team2_id ? `/teams/${match.team2_id}` : '#'}
+                                    className={`text-lg font-semibold hover:text-primary hover:underline transition-colors ${match.team2_name ? 'text-blue-600' : 'text-gray-500'}`}
+                                  >
+                                    {match.team2_name || 'TBD'}
+                                  </Link>
+                                </div>
+                              </div>
+                              {match.winner_name && (
+                                <div className="mt-3 pt-3 border-t border-gray-200 text-center">
+                                  <p className="text-sm text-green-600 font-medium">
+                                    Winner: 
                                     <Link
                                       href={match.winner_id ? `/teams/${match.winner_id}` : '#'}
-                                      className="hover:text-primary hover:underline transition-colors ml-1"
+                                      className="hover:text-primary hover:underline transition-colors ml-1 font-semibold"
                                     >
                                       {match.winner_name}
                                     </Link>
                                   </p>
-                                )}
-                              </div>
+                                </div>
+                              )}
                             </div>
-                            <div className="flex items-center gap-2 flex-wrap">
+
+                            {/* Actions section */}
+                            <div className="flex items-center justify-center gap-3 pt-2">
                               {isPlayable && (
                                 <Dialog>
                                   <DialogTrigger asChild>
                                     <Button
                                       size="sm"
                                       disabled={updatingMatch}
-                                      className="text-xs sm:text-sm px-2 sm:px-3"
+                                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2"
                                     >
                                       {updatingMatch ? 'Updating...' : 'Record Result'}
                                     </Button>
@@ -559,7 +580,7 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
                                       variant="outline"
                                       size="sm"
                                       disabled={resettingMatch === match.match_id}
-                                      className="text-xs sm:text-sm px-2 sm:px-3"
+                                      className="border-red-200 text-red-600 hover:bg-red-50 px-4 py-2"
                                     >
                                       <RotateCcw className="h-3 w-3 mr-1" />
                                       {resettingMatch === match.match_id ? 'Resetting...' : 'Reset'}

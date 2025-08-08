@@ -108,6 +108,12 @@ export function ReactBracketView({ data, eventId, onUpdateMatch, readOnly = fals
     return { status: 'pending', icon: '⏳', color: 'text-gray-400', bgColor: 'bg-gray-50' }
   }
 
+  const getCourtNumber = (matchId: number) => {
+    // Court number is determined by match ID modulo 3, with 0 becoming 3
+    const court = matchId % 3
+    return court === 0 ? 3 : court
+  }
+
   // Transform matches into the format expected by react-brackets
   const transformMatchesToRounds = (matches: Match[], bracketType: string): IRoundProps[] => {
     if (!matches || matches.length === 0) return []
@@ -160,10 +166,10 @@ export function ReactBracketView({ data, eventId, onUpdateMatch, readOnly = fals
 
     return (
       <Seed mobileBreakpoint={breakpoint} style={{ fontSize: 12 }}>
-        <SeedItem className={`${status.bgColor} border border-gray-200 rounded-lg p-3 shadow-sm`}>
+        <SeedItem className="border border-gray-200 rounded-lg p-3 shadow-sm">
           <div className="w-full">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-gray-500 font-medium">Match {match.match_number}</span>
+              <span className="text-xs text-gray-500 font-medium">Court {getCourtNumber(match.match_id)}</span>
               <span className={status.color}>{status.icon}</span>
             </div>
             
@@ -290,10 +296,10 @@ export function ReactBracketView({ data, eventId, onUpdateMatch, readOnly = fals
 
     return (
       <Wrapper mobileBreakpoint={breakpoint} style={{ fontSize: 12 }}>
-        <SeedItem className={`${status.bgColor} border border-gray-200 rounded-lg p-3 shadow-sm`}>
+        <SeedItem className="border border-gray-200 rounded-lg p-3 shadow-sm">
           <div className="w-full">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-gray-500 font-medium">Match {match.match_number}</span>
+              <span className="text-xs text-gray-500 font-medium">Court {getCourtNumber(match.match_id)}</span>
               <span className={status.color}>{status.icon}</span>
             </div>
             

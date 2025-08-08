@@ -563,63 +563,26 @@ export function WorldCupEventView({ event, eventId }: WorldCupEventViewProps) {
                                             </CardTitle>
                                         </CardHeader>
                                         <CardContent className="space-y-4">
-                                            {/* Teams in Group */}
+                                            {/* Group Teams and Standings */}
                                             <div>
-                                                <h4 className="font-medium mb-2">Teams</h4>
-                                                <div className="space-y-1">
-                                                    {group.teams.map((team: { team_id: number; team_name: string }) => (
-                                                        <div key={team.team_id} className="text-sm">
+                                                <h4 className="font-medium mb-2">Teams & Standings</h4>
+                                                <div className="space-y-2">
+                                                    {groupStandings.map((standing) => (
+                                                        <div
+                                                            key={standing.team_id}
+                                                            className="flex items-center justify-between p-2 rounded bg-gray-50 border border-gray-200"
+                                                        >
                                                             <Link
-                                                                href={`/teams/${team.team_id}`}
-                                                                className="hover:text-primary hover:underline transition-colors"
+                                                                href={`/teams/${standing.team_id}`}
+                                                                className="font-medium hover:text-primary hover:underline transition-colors"
                                                             >
-                                                                {team.team_name}
+                                                                {standing.team_name}
                                                             </Link>
+                                                            <span className="text-sm font-bold">
+                                                                {standing.wins}W
+                                                            </span>
                                                         </div>
                                                     ))}
-                                                </div>
-                                            </div>
-
-                                            {/* Group Standings */}
-                                            <div>
-                                                <h4 className="font-medium mb-2">Standings</h4>
-                                                <div className="overflow-x-auto">
-                                                    <table className="w-full text-sm">
-                                                        <thead>
-                                                            <tr className="border-b">
-                                                                <th className="text-left py-1 px-2">Pos</th>
-                                                                <th className="text-left py-1 px-2">Team</th>
-                                                                <th className="text-right py-1 px-2">Wins</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {groupStandings.map((standing) => (
-                                                                <tr
-                                                                    key={standing.team_id}
-                                                                    className={`border-b ${standing.position === 1 ? 'bg-green-50' : ''}`}
-                                                                >
-                                                                    <td className="py-1 px-2">
-                                                                        <div className="flex items-center">
-                                                                            {standing.position === 1 ? (
-                                                                                <span className="text-green-600 font-bold">🥇</span>
-                                                                            ) : (
-                                                                                <span>{standing.position}.</span>
-                                                                            )}
-                                                                        </div>
-                                                                    </td>
-                                                                    <td className="py-1 px-2 font-medium">
-                                                                        <Link
-                                                                            href={`/teams/${standing.team_id}`}
-                                                                            className="hover:text-primary hover:underline transition-colors"
-                                                                        >
-                                                                            {standing.team_name}
-                                                                        </Link>
-                                                                    </td>
-                                                                    <td className="py-1 px-2 text-right font-bold">{standing.wins}</td>
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
                                                 </div>
                                             </div>
 
