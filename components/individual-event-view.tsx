@@ -14,6 +14,7 @@ import { IndividualStandingsReviewModal } from '@/components/individual-standing
 import Link from 'next/link'
 import { useRefModeGuard } from "@/hooks/use-ref-mode-guard"
 import { useRefMode } from "@/components/ref-mode-context"
+import { ResetPasscodeDialog } from "@/components/reset-passcode-dialog"
 
 interface Player {
   player_id: number
@@ -54,6 +55,7 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
   const [selectedTeam, setSelectedTeam] = useState<string>('all')
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null)
   const [showStandingsModal, setShowStandingsModal] = useState(false)
+  const [showResetDialog, setShowResetDialog] = useState(false)
   const [loading, setLoading] = useState(true)
   const [lastTap, setLastTap] = useState<{ playerId: number; time: number } | null>(null)
   const { toast } = useToast()
@@ -134,10 +136,10 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
   }
 
   const handleReset = async () => {
-    if (!confirm('Are you sure you want to reset this event? This will remove all standings and points data and set the event back to in progress.')) {
-      return
-    }
+    setShowResetDialog(true)
+  }
 
+  const handleResetConfirm = async () => {
     await guardRefModeAsync(async () => {
       const response = await fetch(`/api/events/${eventId}/individual-reset`, {
         method: 'POST',
@@ -530,6 +532,15 @@ export function IndividualEventView({ event, eventId }: IndividualEventViewProps
           // Refresh the page to show updated standings
           window.location.reload()
         }}
+      />
+
+      <ResetPasscodeDialog
+        isOpen={showResetDialog}
+        onClose={() => setShowResetDialog(false)}
+        onConfirm={handleResetConfirm}
+        title="Reset Individual Event"
+        description="This will remove all standings and points data and set the event back to in progress. This action cannot be undone."
+        actionName="reset"
       />
     </div>
   )

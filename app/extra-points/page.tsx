@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -37,6 +38,8 @@ export default function ExtraPointsPage() {
   const [updatingStatus, setUpdatingStatus] = useState<number | null>(null)
   const [refereeComments, setRefereeComments] = useState<{ [key: number]: string }>({})
   const [showCommentInput, setShowCommentInput] = useState<{ [key: number]: boolean }>({})
+  const [showModifyDialog, setShowModifyDialog] = useState<{ [key: number]: boolean }>({})
+  const [modifyFormData, setModifyFormData] = useState<{ [key: number]: { point_value: string; comments: string } }>({})
   const [formData, setFormData] = useState({
     team_id: '',
     point_value: '',
@@ -213,6 +216,80 @@ export default function ExtraPointsPage() {
 
   const handleCommentChange = (pointId: number, comment: string) => {
     setRefereeComments(prev => ({ ...prev, [pointId]: comment }))
+  }
+
+  const toggleModifyDialog = (pointId: number) => {
+    setShowModifyDialog(prev => ({ ...prev, [pointId]: !prev[pointId] }))
+    // Initialize form data if opening
+    if (!showModifyDialog[pointId]) {
+      const point = pendingPoints.find(p => p.id === pointId)
+      if (point) {
+        setModifyFormData(prev => ({
+          ...prev,
+          [pointId]: {
+            point_value: point.point_value.toString(),
+            comments: point.comments || ''
+          }
+        }))
+      }
+    }
+  }
+
+  const handleModifyPoint = async (pointId: number) => {
+    try {
+      await guardRefModeAsync(async () => {
+        const formData = modifyFormData[pointId]
+        if (!formData) return
+
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/extra-points`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            id: pointId,
+            point_value: parseInt(formData.point_value),
+            comments: formData.comments || null
+          })
+        })
+
+        const data = await response.json()
+
+        if (data.success) {
+          toast({
+            title: "Success",
+            description: "Point modified successfully",
+          })
+          
+          // Close dialog and refresh data
+          setShowModifyDialog(prev => ({ ...prev, [pointId]: false }))
+          fetchData()
+        } else {
+          toast({
+            title: "Error",
+            description: data.message || "Failed to modify point",
+            variant: "destructive"
+          })
+        }
+      }, "modify point")
+    } catch (error) {
+      console.error('Error modifying point:', error)
+      toast({
+        title: "Error",
+        description: "Failed to modify point",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleModifyFormChange = (pointId: number, field: 'point_value' | 'comments', value: string) => {
+    setModifyFormData(prev => ({
+      ...prev,
+      [pointId]: {
+        ...prev[pointId],
+        [field]: value
+      }
+    }))
   }
 
   if (loading) {
@@ -416,6 +493,14 @@ export default function ExtraPointsPage() {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => toggleModifyDialog(point.id)}
+                          disabled={updatingStatus === point.id}
+                        >
+                          Modify Points
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => toggleCommentInput(point.id)}
                           disabled={updatingStatus === point.id}
                         >
@@ -480,6 +565,50 @@ export default function ExtraPointsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Modify Points Dialog */}
+      {pendingPoints.map((point) => (
+        <Dialog key={`modify-${point.id}`} open={showModifyDialog[point.id] || false} onOpenChange={() => toggleModifyDialog(point.id)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Modify Points for {point.team_name}</DialogTitle>
+              <DialogDescription>
+                Update the point value and comments for this pending extra point.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor={`point-value-${point.id}`}>Point Value</Label>
+                <Input
+                  id={`point-value-${point.id}`}
+                  type="number"
+                  value={modifyFormData[point.id]?.point_value || ''}
+                  onChange={(e) => handleModifyFormChange(point.id, 'point_value', e.target.value)}
+                  placeholder="Enter point value"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`comments-${point.id}`}>Comments</Label>
+                <Textarea
+                  id={`comments-${point.id}`}
+                  value={modifyFormData[point.id]?.comments || ''}
+                  onChange={(e) => handleModifyFormChange(point.id, 'comments', e.target.value)}
+                  placeholder="Add comments (optional)"
+                  rows={3}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => toggleModifyDialog(point.id)}>
+                  Cancel
+                </Button>
+                <Button onClick={() => handleModifyPoint(point.id)}>
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      ))}
     </div>
   )
 } 

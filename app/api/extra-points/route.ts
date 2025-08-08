@@ -135,4 +135,67 @@ export async function PATCH(request: Request) {
             error: error instanceof Error ? error.message : 'Unknown error'
         }, { status: 500 });
     }
+}
+
+export async function PUT(request: Request) {
+    try {
+        const body = await request.json();
+        const { id, point_value, comments } = body;
+
+        // Validate required fields
+        if (!id || point_value === undefined) {
+            return NextResponse.json({
+                success: false,
+                message: 'Missing required fields: id and point_value are required'
+            }, { status: 400 });
+        }
+
+        // Validate that the point exists and is pending
+        const checkResult = await pool.query(`
+            SELECT id, status FROM points 
+            WHERE id = $1 AND point_type IN ('BONUS', 'PENALTY')
+        `, [id]);
+
+        if (checkResult.rows.length === 0) {
+            return NextResponse.json({
+                success: false,
+                message: 'Extra point not found'
+            }, { status: 404 });
+        }
+
+        if (checkResult.rows[0].status !== 'PENDING') {
+            return NextResponse.json({
+                success: false,
+                message: 'Only pending extra points can be modified'
+            }, { status: 400 });
+        }
+
+        // Update the point value and comments
+        const result = await pool.query(`
+            UPDATE points 
+            SET point_value = $1, comments = $2, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $3 AND point_type IN ('BONUS', 'PENALTY') AND status = 'PENDING'
+            RETURNING id, team_id, point_value, point_type, comments, updated_at, status
+        `, [point_value, comments || null, id]);
+
+        if (result.rows.length === 0) {
+            return NextResponse.json({
+                success: false,
+                message: 'Failed to update extra point'
+            }, { status: 500 });
+        }
+
+        return NextResponse.json({
+            success: true,
+            extraPoint: result.rows[0],
+            message: 'Extra point modified successfully'
+        });
+    } catch (error) {
+        console.error('Error modifying extra point:', error);
+        return NextResponse.json({
+            success: false,
+            message: 'Failed to modify extra point',
+            error: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 });
+    }
 } 

@@ -11,6 +11,7 @@ import { Trophy } from 'lucide-react'
 import Link from 'next/link'
 import { useRefModeGuard } from "@/hooks/use-ref-mode-guard"
 import { useRefMode } from "@/components/ref-mode-context"
+import { ResetPasscodeDialog } from "@/components/reset-passcode-dialog"
 
 interface WorldCupEventViewProps {
     event: any
@@ -73,11 +74,12 @@ export function WorldCupEventView({ event, eventId }: WorldCupEventViewProps) {
     const [tieBreakDecisions, setTieBreakDecisions] = useState<{ [key: string]: number }>({})
     const [calculatingStandings, setCalculatingStandings] = useState(false)
     const [tournamentFinalStandings, setTournamentFinalStandings] = useState<any[]>([])
-    const [resetDialogOpen, setResetDialogOpen] = useState(false)
-    const [resetting, setResetting] = useState(false)
-    const { toast } = useToast()
-    const { guardRefModeAsync } = useRefModeGuard()
-    const { isRefMode } = useRefMode()
+      const [resetDialogOpen, setResetDialogOpen] = useState(false)
+  const [showResetPasscodeDialog, setShowResetPasscodeDialog] = useState(false)
+  const [resetting, setResetting] = useState(false)
+  const { toast } = useToast()
+  const { guardRefModeAsync } = useRefModeGuard()
+  const { isRefMode } = useRefMode()
 
     useEffect(() => {
         fetchWorldCupData()
@@ -204,6 +206,10 @@ export function WorldCupEventView({ event, eventId }: WorldCupEventViewProps) {
     }
 
     const handleResetEvent = async () => {
+        setShowResetPasscodeDialog(true)
+    }
+
+    const handleResetEventConfirm = async () => {
         setResetting(true)
         try {
             await guardRefModeAsync(async () => {
@@ -474,7 +480,7 @@ export function WorldCupEventView({ event, eventId }: WorldCupEventViewProps) {
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => setResetDialogOpen(true)}
+                                        onClick={() => setShowResetPasscodeDialog(true)}
                                         className="text-red-600 border-red-200 hover:bg-red-50"
                                     >
                                         Reset Tournament
@@ -839,25 +845,15 @@ export function WorldCupEventView({ event, eventId }: WorldCupEventViewProps) {
                 </DialogContent>
             </Dialog>
 
-            {/* Reset Confirmation Dialog */}
-            <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Confirm Tournament Reset</DialogTitle>
-                        <DialogDescription>
-                            Are you sure you want to reset this tournament? This action cannot be undone.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="flex justify-end gap-2">
-                        <Button variant="outline" onClick={() => setResetDialogOpen(false)} className="text-red-600 border-red-200 hover:bg-red-50">
-                            Cancel
-                        </Button>
-                        <Button variant="destructive" onClick={handleResetEvent} disabled={resetting}>
-                            {resetting ? 'Resetting...' : 'Reset Tournament'}
-                        </Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
+            {/* Reset Passcode Dialog */}
+            <ResetPasscodeDialog
+                isOpen={showResetPasscodeDialog}
+                onClose={() => setShowResetPasscodeDialog(false)}
+                onConfirm={handleResetEventConfirm}
+                title="Reset World Cup Tournament"
+                description="This will reset all matches, standings, and tournament progress. All data will be cleared and the tournament will be set back to the beginning. This action cannot be undone."
+                actionName="reset"
+            />
         </>
     )
 } 

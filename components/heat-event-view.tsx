@@ -10,6 +10,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRefModeGuard } from "@/hooks/use-ref-mode-guard"
 import { useRefMode } from "@/components/ref-mode-context"
+import { ResetPasscodeDialog } from "@/components/reset-passcode-dialog"
 
 interface HeatEventViewProps {
   event: any
@@ -21,6 +22,7 @@ interface HeatEventViewProps {
 export function HeatEventView({ event, heatMatches, standings, eventId }: HeatEventViewProps) {
   const allHeatsCompleted = heatMatches?.every((match: any) => match.heat_status === 'COMPLETED')
   const [showStandingsModal, setShowStandingsModal] = useState(false)
+  const [showResetDialog, setShowResetDialog] = useState(false)
   const { guardRefModeAsync } = useRefModeGuard()
   const { isRefMode } = useRefMode()
 
@@ -44,11 +46,7 @@ export function HeatEventView({ event, heatMatches, standings, eventId }: HeatEv
               )}
               {event.event_status === 'COMPLETED' && isRefMode && (
                 <Button
-                  onClick={async () => {
-                    await guardRefModeAsync(async () => {
-                      await resetHeatEvent(eventId)
-                    }, "reset event")
-                  }}
+                  onClick={() => setShowResetDialog(true)}
                   variant="destructive"
                 >
                   Reset Event
@@ -188,6 +186,19 @@ export function HeatEventView({ event, heatMatches, standings, eventId }: HeatEv
           // Refresh the page to show updated standings
           window.location.reload()
         }}
+      />
+
+      <ResetPasscodeDialog
+        isOpen={showResetDialog}
+        onClose={() => setShowResetDialog(false)}
+        onConfirm={async () => {
+          await guardRefModeAsync(async () => {
+            await resetHeatEvent(eventId)
+          }, "reset event")
+        }}
+        title="Reset Heat Event"
+        description="This will reset all heat matches and standings, setting the event back to in progress. This action cannot be undone."
+        actionName="reset"
       />
     </>
   )

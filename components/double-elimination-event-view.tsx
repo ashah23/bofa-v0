@@ -30,6 +30,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { useRefModeGuard } from "@/hooks/use-ref-mode-guard"
 import { useRefMode } from "@/components/ref-mode-context"
+import { ResetPasscodeDialog } from "@/components/reset-passcode-dialog"
 
 interface Match {
   match_id: number
@@ -81,6 +82,7 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
   const [error, setError] = useState<string | null>(null)
   const [resettingMatch, setResettingMatch] = useState<number | null>(null)
   const [resettingBracket, setResettingBracket] = useState(false)
+  const [showResetPasscodeDialog, setShowResetPasscodeDialog] = useState(false)
   const [updatingMatch, setUpdatingMatch] = useState(false)
   const [currentTab, setCurrentTab] = useState("bracket")
   const { toast } = useToast()
@@ -177,6 +179,10 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
   }
 
   const resetEntireBracket = async () => {
+    setShowResetPasscodeDialog(true)
+  }
+
+  const resetEntireBracketConfirm = async () => {
     try {
       await guardRefModeAsync(async () => {
         setResettingBracket(true)
@@ -601,49 +607,29 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
                   <CardDescription>Advanced tournament controls</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="destructive"
-                        disabled={resettingBracket}
-                      >
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        {resettingBracket ? 'Resetting...' : 'Reset Entire Bracket'}
-                      </Button>
-                    </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Reset Entire Bracket</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to reset the entire tournament? This will:
-                        <ul className="list-disc list-inside mt-2">
-                          <li>Clear all match results</li>
-                          <li>Reset team assignments in later rounds</li>
-                          <li>Remove all points awarded for this event</li>
-                          <li>Set event status back to "Scheduled"</li>
-                        </ul>
-                        <p className="mt-2 font-semibold text-red-600">
-                          This action cannot be undone!
-                        </p>
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={resetEntireBracket}
-                        className="bg-red-600 hover:bg-red-700"
-                      >
-                        Reset Entire Bracket
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </CardContent>
-            </Card>
+                  <Button
+                    variant="destructive"
+                    disabled={resettingBracket}
+                    onClick={() => setShowResetPasscodeDialog(true)}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    {resettingBracket ? 'Resetting...' : 'Reset Entire Bracket'}
+                  </Button>
+                </CardContent>
+              </Card>
             )}
           </div>
         </TabsContent>
       </Tabs>
+
+      <ResetPasscodeDialog
+        isOpen={showResetPasscodeDialog}
+        onClose={() => setShowResetPasscodeDialog(false)}
+        onConfirm={resetEntireBracketConfirm}
+        title="Reset Double Elimination Tournament"
+        description="This will reset the entire tournament, clearing all match results, team assignments, and points. The event will be set back to 'Scheduled' status. This action cannot be undone."
+        actionName="reset"
+      />
     </div>
   )
 } 
