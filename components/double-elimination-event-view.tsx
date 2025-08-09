@@ -31,6 +31,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useRefModeGuard } from "@/hooks/use-ref-mode-guard"
 import { useRefMode } from "@/components/ref-mode-context"
 import { ResetPasscodeDialog } from "@/components/reset-passcode-dialog"
+import { DoubleEliminationStandingsReviewModal } from "@/components/double-elimination-standings-review-modal"
 
 interface Match {
   match_id: number
@@ -89,6 +90,7 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
   const [resettingMatch, setResettingMatch] = useState<number | null>(null)
   const [resettingBracket, setResettingBracket] = useState(false)
   const [showResetPasscodeDialog, setShowResetPasscodeDialog] = useState(false)
+  const [showStandingsModal, setShowStandingsModal] = useState(false)
   const [updatingMatch, setUpdatingMatch] = useState(false)
   const [currentTab, setCurrentTab] = useState("bracket")
   const [eventStandings, setEventStandings] = useState<any[]>([])
@@ -1031,7 +1033,7 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
                   <Button
                     variant="default"
                     className="bg-green-600 hover:bg-green-700"
-                    onClick={() => completeEvent()}
+                    onClick={() => setShowStandingsModal(true)}
                   >
                     <Trophy className="h-4 w-4 mr-2" />
                     Complete Event & Calculate Standings
@@ -1050,6 +1052,20 @@ export function DoubleEliminationEventView({ event, eventId }: DoubleElimination
         title="Reset Double Elimination Tournament"
         description="This will reset the entire tournament, clearing all match results, team assignments, and points. The event will be set back to 'Scheduled' status. This action cannot be undone."
         actionName="reset"
+      />
+
+      <DoubleEliminationStandingsReviewModal
+        isOpen={showStandingsModal}
+        onClose={() => setShowStandingsModal(false)}
+        eventId={eventId}
+        onComplete={() => {
+          setShowStandingsModal(false)
+          // Refresh the data to show updated standings
+          fetchData()
+          // Switch to standings tab
+          setCurrentTab("standings")
+        }}
+        initialStandings={calculateFinalStandings()}
       />
     </div>
   )
